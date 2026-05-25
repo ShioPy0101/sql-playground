@@ -179,6 +179,21 @@ func TestTaskServiceSubmitForUserRecordsSubmission(t *testing.T) {
 	}
 }
 
+func TestTaskServiceSubmissionsReturnsEmptySlice(t *testing.T) {
+	service := newTestTaskService(t)
+
+	submissions, err := service.Submissions()
+	if err != nil {
+		t.Fatalf("Submissions returned error: %v", err)
+	}
+	if submissions == nil {
+		t.Fatalf("Submissions returned nil, want empty slice")
+	}
+	if len(submissions) != 0 {
+		t.Fatalf("submission count = %d, want 0", len(submissions))
+	}
+}
+
 func TestTaskServiceListPublicTasks(t *testing.T) {
 	taskDir := t.TempDir()
 	writeTaskFile(t, taskDir, "002.json", `{

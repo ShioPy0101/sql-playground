@@ -83,7 +83,7 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 	}
 	defer rows.Close()
 
-	var submissions []TaskSubmission
+	submissions := []TaskSubmission{}
 	for rows.Next() {
 		var submission TaskSubmission
 		var casesJSON string

@@ -26,8 +26,9 @@ export function AdminPage() {
         if (ignore) {
           return;
         }
-        setSubmissions(payload.submissions);
-        setSelectedID(payload.submissions[0]?.id ?? null);
+        const nextSubmissions = payload.submissions ?? [];
+        setSubmissions(nextSubmissions);
+        setSelectedID(nextSubmissions[0]?.id ?? null);
       })
       .catch((err) => {
         if (!ignore) {

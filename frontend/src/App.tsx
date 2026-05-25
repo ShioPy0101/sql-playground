@@ -26,6 +26,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
 
   const previewRows = useMemo(() => parseCSVPreview(result), [result]);
+  const tableLabel = useMemo(() => formatTableLabel(csv), [csv]);
 
   async function executeSQL(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,7 +74,7 @@ function App() {
         <section className="editor-panel" aria-label="CSV input">
           <div className="panel-heading">
             <h2>CSV</h2>
-            <span>table: input</span>
+            <span>{tableLabel}</span>
           </div>
           <textarea
             value={csv}
@@ -146,6 +147,49 @@ function parseCSVPreview(csvText: string) {
     .split("\n")
     .filter(Boolean)
     .map((line) => line.split(",").map((cell) => cell.trim()));
+}
+
+function formatTableLabel(csvText: string) {
+  const names = parseTableNames(csvText);
+
+  if (names.length === 1) {
+    return `table: ${names[0]}`;
+  }
+
+  return `tables: ${names.join(", ")}`;
+}
+
+function parseTableNames(csvText: string) {
+  const markerNames = csvText
+    .split("\n")
+    .map((line) => parseTableMarker(line))
+    .filter((name): name is string => Boolean(name));
+
+  if (markerNames.length === 0) {
+    return ["input"];
+  }
+
+  return Array.from(new Set(markerNames));
+}
+
+function parseTableMarker(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  const lower = trimmed.toLowerCase();
+  for (const prefix of ["# table:", "-- table:"]) {
+    if (lower.startsWith(prefix)) {
+      return trimmed.slice(prefix.length).trim();
+    }
+  }
+
+  return "";
 }
 
 export default App;

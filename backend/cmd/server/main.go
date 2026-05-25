@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"os"
 
-	// "github.com/ShioPy0101/sql-playground/internal/pandasHandler"
+	// "github.com/ShioPy0101/sql-playground/pkg/pandasHandler"
 
-	"github.com/ShioPy0101/sql-playground/internal/handler/sqliteHandler"
-	"github.com/ShioPy0101/sql-playground/internal/handler/taskHandler"
-	"github.com/ShioPy0101/sql-playground/internal/service"
+	"github.com/ShioPy0101/sql-playground/pkg/handler/sqliteHandler"
+	"github.com/ShioPy0101/sql-playground/pkg/handler/taskHandler"
+	"github.com/ShioPy0101/sql-playground/pkg/service"
 	"github.com/labstack/echo/v4"
 	_ "modernc.org/sqlite"
 )

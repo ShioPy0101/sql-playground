@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/ShioPy0101/sql-playground/internal/service"
 	"github.com/ShioPy0101/sql-playground/pkg/httpapi"
+	"github.com/ShioPy0101/sql-playground/pkg/service"
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {

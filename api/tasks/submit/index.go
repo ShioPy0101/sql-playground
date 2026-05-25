@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ShioPy0101/sql-playground/internal/httpapi"
+	"github.com/ShioPy0101/sql-playground/pkg/httpapi"
 )
 
 type submitRequest struct {

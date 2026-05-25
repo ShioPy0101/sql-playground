@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ShioPy0101/sql-playground/internal/service"
+	"github.com/ShioPy0101/sql-playground/pkg/service"
 )
 
 const UserCookieName = "sql_playground_user_id"

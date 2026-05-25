@@ -1,6 +1,6 @@
 package service
 
-import "github.com/ShioPy0101/sql-playground/internal/service/helper"
+import "github.com/ShioPy0101/sql-playground/pkg/service/helper"
 
 // SQLiteService executes SQL against CSV-backed temporary SQLite tables.
 type SQLiteService struct{}

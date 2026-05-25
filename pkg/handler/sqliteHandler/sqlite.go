@@ -3,7 +3,7 @@ package sqliteHandler
 import (
 	"net/http"
 
-	"github.com/ShioPy0101/sql-playground/internal/service"
+	"github.com/ShioPy0101/sql-playground/pkg/service"
 	"github.com/labstack/echo/v4"
 )
 

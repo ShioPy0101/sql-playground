@@ -20,7 +20,7 @@ func NewSubmissionStore(dbPath string) (*SubmissionStore, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}

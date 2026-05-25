@@ -8,6 +8,7 @@ import (
 	"github.com/ShioPy0101/sql-playground/internal/handler/sqliteHandler"
 	"github.com/ShioPy0101/sql-playground/internal/service"
 	"github.com/labstack/echo/v4"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {

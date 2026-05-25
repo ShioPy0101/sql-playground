@@ -11,6 +11,18 @@
     {
       "source": "/api/tasks/:number",
       "destination": "/api/tasks/show?number=:number"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sqlite",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tasks/:number",
+      "destination": "/index.html"
     }
   ]
 }

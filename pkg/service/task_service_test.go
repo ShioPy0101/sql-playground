@@ -231,6 +231,22 @@ func TestTaskServiceListPublicTasks(t *testing.T) {
 	}
 }
 
+func TestTaskServiceListBundledTasks(t *testing.T) {
+	service := newTestTaskService(t)
+
+	tasks, err := service.ListPublicTasks()
+	if err != nil {
+		t.Fatalf("ListPublicTasks returned error: %v", err)
+	}
+
+	if len(tasks) == 0 {
+		t.Fatalf("task count = 0, want bundled tasks")
+	}
+	if tasks[0].Number != 1 {
+		t.Fatalf("first bundled task number = %d, want 1", tasks[0].Number)
+	}
+}
+
 func TestTaskServiceAppliesUserProgress(t *testing.T) {
 	taskDir := t.TempDir()
 	writeTaskFile(t, taskDir, "001.json", `{

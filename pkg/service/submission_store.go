@@ -6,16 +6,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
 )
 
 type SubmissionStore struct {
-	db *sql.DB
+	db      *sql.DB
+	dialect string
 }
 
 func NewSubmissionStore(dbPath string) (*SubmissionStore, error) {
+	if databaseURL := submissionsDatabaseURL(); databaseURL != "" {
+		return newPostgresSubmissionStore(databaseURL)
+	}
+
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
 	}
@@ -25,7 +32,21 @@ func NewSubmissionStore(dbPath string) (*SubmissionStore, error) {
 		return nil, err
 	}
 
-	store := &SubmissionStore{db: db}
+	store := &SubmissionStore{db: db, dialect: "sqlite"}
+	if err := store.migrate(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return store, nil
+}
+
+func newPostgresSubmissionStore(databaseURL string) (*SubmissionStore, error) {
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	store := &SubmissionStore{db: db, dialect: "postgres"}
 	if err := store.migrate(); err != nil {
 		db.Close()
 		return nil, err
@@ -39,7 +60,7 @@ func (s *SubmissionStore) Insert(submission TaskSubmission) error {
 		return err
 	}
 
-	_, err = s.db.Exec(`
+	_, err = s.db.Exec(s.rebind(`
 		INSERT INTO task_submissions (
 			user_id,
 			task_number,
@@ -50,7 +71,7 @@ func (s *SubmissionStore) Insert(submission TaskSubmission) error {
 			cases_json,
 			submitted_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`,
+	`),
 		submission.UserID,
 		submission.TaskNumber,
 		submission.TaskSlug,
@@ -83,7 +104,7 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 	}
 	defer rows.Close()
 
-	var submissions []TaskSubmission
+	submissions := []TaskSubmission{}
 	for rows.Next() {
 		var submission TaskSubmission
 		var casesJSON string
@@ -121,7 +142,7 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 }
 
 func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgress, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.db.Query(s.rebind(`
 		SELECT
 			task_number,
 			query,
@@ -130,7 +151,7 @@ func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgres
 		FROM task_submissions
 		WHERE user_id = ?
 		ORDER BY submitted_at DESC, id DESC
-	`, userID)
+	`), userID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +194,10 @@ func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgres
 }
 
 func (s *SubmissionStore) migrate() error {
+	if s.dialect == "postgres" {
+		return s.migratePostgres()
+	}
+
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS task_submissions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,4 +221,56 @@ func (s *SubmissionStore) migrate() error {
 			ON task_submissions (user_id, task_number, submitted_at DESC, id DESC);
 	`)
 	return err
+}
+
+func (s *SubmissionStore) migratePostgres() error {
+	_, err := s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS task_submissions (
+			id BIGSERIAL PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			task_number INTEGER NOT NULL,
+			task_slug TEXT NOT NULL,
+			task_title TEXT NOT NULL,
+			query TEXT NOT NULL,
+			passed BOOLEAN NOT NULL,
+			cases_json TEXT NOT NULL,
+			submitted_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_task_submissions_submitted_at
+			ON task_submissions (submitted_at DESC, id DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_task_submissions_user_id
+			ON task_submissions (user_id);
+
+		CREATE INDEX IF NOT EXISTS idx_task_submissions_user_task
+			ON task_submissions (user_id, task_number, submitted_at DESC, id DESC);
+	`)
+	return err
+}
+
+func (s *SubmissionStore) rebind(query string) string {
+	if s.dialect != "postgres" {
+		return query
+	}
+
+	var builder strings.Builder
+	placeholder := 1
+	for _, char := range query {
+		if char == '?' {
+			builder.WriteString(fmt.Sprintf("$%d", placeholder))
+			placeholder++
+			continue
+		}
+		builder.WriteRune(char)
+	}
+	return builder.String()
+}
+
+func submissionsDatabaseURL() string {
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		return databaseURL
+	}
+
+	return os.Getenv("POSTGRES_URL")
 }

@@ -179,6 +179,21 @@ func TestTaskServiceSubmitForUserRecordsSubmission(t *testing.T) {
 	}
 }
 
+func TestTaskServiceSubmissionsReturnsEmptySlice(t *testing.T) {
+	service := newTestTaskService(t)
+
+	submissions, err := service.Submissions()
+	if err != nil {
+		t.Fatalf("Submissions returned error: %v", err)
+	}
+	if submissions == nil {
+		t.Fatalf("Submissions returned nil, want empty slice")
+	}
+	if len(submissions) != 0 {
+		t.Fatalf("submission count = %d, want 0", len(submissions))
+	}
+}
+
 func TestTaskServiceListPublicTasks(t *testing.T) {
 	taskDir := t.TempDir()
 	writeTaskFile(t, taskDir, "002.json", `{
@@ -228,6 +243,22 @@ func TestTaskServiceListPublicTasks(t *testing.T) {
 	}
 	if tasks[1].Number != 2 || tasks[1].TestCount != 1 {
 		t.Fatalf("second task = %#v, want task 2 with one test", tasks[1])
+	}
+}
+
+func TestTaskServiceListBundledTasks(t *testing.T) {
+	service := newTestTaskService(t)
+
+	tasks, err := service.ListPublicTasks()
+	if err != nil {
+		t.Fatalf("ListPublicTasks returned error: %v", err)
+	}
+
+	if len(tasks) == 0 {
+		t.Fatalf("task count = 0, want bundled tasks")
+	}
+	if tasks[0].Number != 1 {
+		t.Fatalf("first bundled task number = %d, want 1", tasks[0].Number)
 	}
 }
 
@@ -300,6 +331,8 @@ func TestTaskServiceAppliesUserProgress(t *testing.T) {
 
 func newTestTaskService(t *testing.T) *TaskService {
 	t.Helper()
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("POSTGRES_URL", "")
 
 	service, err := NewTaskServiceWithSubmissionDB(NewSQLiteService(), filepath.Join(t.TempDir(), "submissions.sqlite"))
 	if err != nil {

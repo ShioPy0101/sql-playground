@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	taskdata "github.com/ShioPy0101/sql-playground/tasks"
 )
 
 type Constraint struct {
@@ -78,8 +81,13 @@ type TaskCaseResult struct {
 
 type TaskService struct {
 	sqliteService *SQLiteService
-	taskDirs      []string
+	taskSources   []taskSource
 	submissions   *SubmissionStore
+}
+
+type taskSource struct {
+	label string
+	fs    fs.FS
 }
 
 type TaskSubmission struct {
@@ -114,7 +122,7 @@ func NewTaskServiceWithSubmissionDB(sqliteService *SQLiteService, dbPath string)
 
 	return &TaskService{
 		sqliteService: sqliteService,
-		taskDirs:      taskDirectories(),
+		taskSources:   taskSources(),
 		submissions:   submissions,
 	}, nil
 }
@@ -160,8 +168,8 @@ func (s *TaskService) ListPublicTasksForUser(userID string) ([]PublicTaskSummary
 		}
 	}
 
-	for _, dir := range s.taskDirs {
-		entries, err := os.ReadDir(dir)
+	for _, source := range s.taskSources {
+		entries, err := fs.ReadDir(source.fs, ".")
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -174,14 +182,14 @@ func (s *TaskService) ListPublicTasksForUser(userID string) ([]PublicTaskSummary
 				continue
 			}
 
-			content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			content, err := fs.ReadFile(source.fs, entry.Name())
 			if err != nil {
 				return nil, err
 			}
 
 			var task Task
 			if err := json.Unmarshal(content, &task); err != nil {
-				return nil, fmt.Errorf("invalid task file %s: %w", filepath.Join(dir, entry.Name()), err)
+				return nil, fmt.Errorf("invalid task file %s: %w", filepath.Join(source.label, entry.Name()), err)
 			}
 			if seen[task.Number] {
 				continue
@@ -261,10 +269,9 @@ func (s *TaskService) submit(number string, query string, userID string) (TaskSu
 
 func (s *TaskService) LoadTask(number string) (Task, error) {
 	fileNames := taskFileNames(number)
-	for _, dir := range s.taskDirs {
+	for _, source := range s.taskSources {
 		for _, fileName := range fileNames {
-			path := filepath.Join(dir, fileName)
-			content, err := os.ReadFile(path)
+			content, err := fs.ReadFile(source.fs, fileName)
 			if err != nil {
 				if os.IsNotExist(err) {
 					continue
@@ -274,7 +281,7 @@ func (s *TaskService) LoadTask(number string) (Task, error) {
 
 			var task Task
 			if err := json.Unmarshal(content, &task); err != nil {
-				return Task{}, fmt.Errorf("invalid task file %s: %w", path, err)
+				return Task{}, fmt.Errorf("invalid task file %s: %w", filepath.Join(source.label, fileName), err)
 			}
 			return task, nil
 		}
@@ -298,12 +305,16 @@ func taskFileNames(number string) []string {
 	return names
 }
 
-func taskDirectories() []string {
+func taskSources() []taskSource {
 	if dir := os.Getenv("TASKS_DIR"); dir != "" {
-		return []string{dir}
+		return []taskSource{{label: dir, fs: os.DirFS(dir)}}
 	}
 
-	return []string{"tasks", "backend/tasks"}
+	return []taskSource{
+		{label: "embedded tasks", fs: taskdata.FS},
+		{label: "tasks", fs: os.DirFS("tasks")},
+		{label: "backend/tasks", fs: os.DirFS("backend/tasks")},
+	}
 }
 
 func submissionsDBPath() string {

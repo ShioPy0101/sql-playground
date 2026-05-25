@@ -11,6 +11,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if !httpapi.RequireMethod(w, r, http.MethodGet) {
 		return
 	}
+	if !httpapi.RequireAdminBasicAuth(w, r) {
+		return
+	}
 
 	taskService, err := httpapi.TaskService()
 	if err != nil {

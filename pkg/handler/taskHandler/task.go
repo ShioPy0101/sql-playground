@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ShioPy0101/sql-playground/pkg/httpapi"
 	"github.com/ShioPy0101/sql-playground/pkg/service"
 	"github.com/labstack/echo/v4"
 )
@@ -97,6 +98,10 @@ func (h *TaskHandler) CurrentUser(c echo.Context) error {
 }
 
 func (h *TaskHandler) AdminSubmissions(c echo.Context) error {
+	if !httpapi.RequireAdminBasicAuth(c.Response().Writer, c.Request()) {
+		return nil
+	}
+
 	submissions, err := h.service.Submissions()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{

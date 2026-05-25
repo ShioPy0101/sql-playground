@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +15,7 @@ import (
 )
 
 const UserCookieName = "sql_playground_user_id"
+const AdminBasicAuthRealm = "SQL Playground Admin"
 
 type ErrorResponse struct {
 	Message string `json:"message"`
@@ -73,6 +76,28 @@ func RequireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 		Message: "method not allowed",
 	})
 	return false
+}
+
+func RequireAdminBasicAuth(w http.ResponseWriter, r *http.Request) bool {
+	expectedUsername := os.Getenv("ADMIN_USERNAME")
+	expectedPassword := os.Getenv("ADMIN_PASSWORD")
+	if expectedUsername == "" || expectedPassword == "" {
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{
+			Message: "admin credentials are not configured",
+		})
+		return false
+	}
+
+	username, password, ok := r.BasicAuth()
+	if !ok || subtle.ConstantTimeCompare([]byte(username), []byte(expectedUsername)) != 1 || subtle.ConstantTimeCompare([]byte(password), []byte(expectedPassword)) != 1 {
+		w.Header().Set("WWW-Authenticate", `Basic realm="`+AdminBasicAuthRealm+`", charset="UTF-8"`)
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{
+			Message: "authentication required",
+		})
+		return false
+	}
+
+	return true
 }
 
 func WriteJSON(w http.ResponseWriter, status int, payload any) {

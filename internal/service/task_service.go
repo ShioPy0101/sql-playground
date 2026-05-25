@@ -311,6 +311,10 @@ func submissionsDBPath() string {
 		return path
 	}
 
+	if os.Getenv("VERCEL") != "" {
+		return filepath.Join(os.TempDir(), "submissions.sqlite")
+	}
+
 	return filepath.Join("data", "submissions.sqlite")
 }
 

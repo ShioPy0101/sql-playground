@@ -20,7 +20,7 @@ func OpenTempSQLiteDB() (*sql.DB, func(), error) {
 		return nil, nil, err
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		os.Remove(dbPath)
 		return nil, nil, err

@@ -302,6 +302,28 @@ th {
   grid-column: 1 / -1;
 }
 
+.input-table-list {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.input-table-item {
+  overflow: hidden;
+  border: 1px solid #e8eaed;
+  border-radius: 6px;
+}
+
+.input-table-name {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e8eaed;
+  background: #ffffff;
+  color: #3c4043;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
 .task-copy {
   padding: 18px;
 }

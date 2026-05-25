@@ -1,5 +1,5 @@
 import { Task } from "../api/client";
-import { parseCSVPreview } from "../utils/csv";
+import { parseCSVTables } from "../utils/csv";
 import { DataTable } from "./DataTable";
 
 type TaskDetailsProps = {
@@ -7,6 +7,8 @@ type TaskDetailsProps = {
 };
 
 export function TaskDetails({ task }: TaskDetailsProps) {
+  const tables = parseCSVTables(task.csv);
+
   return (
     <section className="task-details" aria-label="問題詳細">
       <div className="task-statement">
@@ -38,22 +40,17 @@ export function TaskDetails({ task }: TaskDetailsProps) {
       <div className="task-table">
         <div className="panel-heading">
           <h2>入力テーブル</h2>
-          <span>サンプル入力</span>
+          <span>{tables.length} 件</span>
         </div>
-        <DataTable rows={parseCSVPreview(stripTableMarkers(task.csv))} />
+        <div className="input-table-list">
+          {tables.map((table) => (
+            <div className="input-table-item" key={table.name}>
+              <p className="input-table-name">{table.name}</p>
+              <DataTable rows={table.rows} />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
-}
-
-function stripTableMarkers(csvText: string) {
-  return csvText
-    .split("\n")
-    .filter((line) => {
-      const trimmed = line.trim();
-      return !(trimmed.startsWith("[") && trimmed.endsWith("]"));
-    })
-    .filter((line) => !line.toLowerCase().startsWith("# table:"))
-    .filter((line) => !line.toLowerCase().startsWith("-- table:"))
-    .join("\n");
 }

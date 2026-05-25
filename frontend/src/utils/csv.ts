@@ -4,6 +4,11 @@ export type ResultSection = {
   status: string;
 };
 
+export type CSVTable = {
+  name: string;
+  rows: string[][];
+};
+
 export function parseResultSections(resultText: string): ResultSection[] {
   const trimmed = resultText.trim();
   if (!trimmed) {
@@ -56,6 +61,40 @@ export function parseCSVPreview(csvText: string) {
     .split("\n")
     .filter(Boolean)
     .map((line) => line.split(",").map((cell) => cell.trim()));
+}
+
+export function parseCSVTables(csvText: string): CSVTable[] {
+  const tables: Array<{ name: string; lines: string[] }> = [];
+  let current = { name: "input", lines: [] as string[] };
+  let hasMarker = false;
+
+  for (const line of csvText.split("\n")) {
+    const markerName = parseTableMarker(line);
+    if (markerName) {
+      if (current.lines.some((value) => value.trim())) {
+        tables.push(current);
+      }
+
+      current = { name: markerName, lines: [] };
+      hasMarker = true;
+      continue;
+    }
+
+    current.lines.push(line);
+  }
+
+  if (current.lines.some((value) => value.trim())) {
+    tables.push(current);
+  }
+
+  if (!hasMarker && tables.length === 0 && csvText.trim()) {
+    tables.push({ name: "input", lines: csvText.split("\n") });
+  }
+
+  return tables.map((table) => ({
+    name: table.name,
+    rows: parseCSVPreview(table.lines.join("\n"))
+  }));
 }
 
 export function formatTableLabel(csvText: string) {

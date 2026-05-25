@@ -8,10 +8,10 @@ type TaskDetailsProps = {
 
 export function TaskDetails({ task }: TaskDetailsProps) {
   return (
-    <section className="task-details" aria-label="Task details">
+    <section className="task-details" aria-label="問題詳細">
       <div className="task-statement">
         <div className="panel-heading">
-          <h2>Problem</h2>
+          <h2>問題文</h2>
           <span>#{String(task.number).padStart(3, "0")}</span>
         </div>
         <div className="task-copy">
@@ -22,8 +22,8 @@ export function TaskDetails({ task }: TaskDetailsProps) {
 
       <div className="task-constraints">
         <div className="panel-heading">
-          <h2>Constraints</h2>
-          <span>{task.constraints.length} items</span>
+          <h2>制約</h2>
+          <span>{task.constraints.length} 件</span>
         </div>
         <dl>
           {task.constraints.map((constraint) => (
@@ -37,8 +37,8 @@ export function TaskDetails({ task }: TaskDetailsProps) {
 
       <div className="task-table">
         <div className="panel-heading">
-          <h2>CSV Preview</h2>
-          <span>sample input</span>
+          <h2>入力テーブル</h2>
+          <span>サンプル入力</span>
         </div>
         <DataTable rows={parseCSVPreview(stripTableMarkers(task.csv))} />
       </div>

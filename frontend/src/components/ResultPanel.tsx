@@ -13,10 +13,10 @@ export function ResultPanel({ result, error, emptyText }: ResultPanelProps) {
   const resultRowCount = useMemo(() => countResultRows(resultSections), [resultSections]);
 
   return (
-    <section className="result-panel" aria-label="Query result">
+    <section className="result-panel" aria-label="実行結果">
       <div className="panel-heading">
-        <h2>Result</h2>
-        <span>{result ? `${resultRowCount} rows` : "waiting"}</span>
+        <h2>実行結果</h2>
+        <span>{result ? `${resultRowCount} 行` : "待機中"}</span>
       </div>
 
       {error ? <pre className="error-output">{error}</pre> : null}

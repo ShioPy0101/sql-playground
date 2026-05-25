@@ -106,15 +106,15 @@ export function TaskPage({ number }: TaskPageProps) {
     <main className="app-shell task-shell">
       <header className="app-header">
         <div>
-          <p className="eyebrow">SQL Task</p>
-          <h1>{task.title}</h1>
+          <p className="eyebrow">SQL課題</p>
+          <h4>{task.title}</h4>
         </div>
         <div className="task-actions">
           <button form="task-form" className="secondary-button" disabled={isRunning || isSubmitting}>
-            {isRunning ? "Running..." : "Run"}
+            {isRunning ? "実行中..." : "実行"}
           </button>
           <button className="run-button" disabled={isRunning || isSubmitting} onClick={handleSubmit}>
-            {isSubmitting ? "Judging..." : "Submit"}
+            {isSubmitting ? "採点中..." : "提出"}
           </button>
         </div>
       </header>
@@ -123,14 +123,15 @@ export function TaskPage({ number }: TaskPageProps) {
 
       <form id="task-form" className="task-workspace" onSubmit={handleRun}>
         <EditorPanel
-          title="SQL"
-          label="SQLite"
+          title="解答SQL"
+          label="編集できます"
           value={query}
-          ariaLabel="SQL answer"
+          ariaLabel="解答SQL"
+          className="answer-editor"
           onChange={setQuery}
         />
-        <EditorPanel title="CSV" label={tableLabel} value={task.csv} ariaLabel="Task CSV" readOnly />
-        <ResultPanel result={result} error={error} emptyText="Run でサンプルに対する実行結果を確認できます。" />
+        {/* <EditorPanel title="CSV" label={tableLabel} value={task.csv} ariaLabel="Task CSV" readOnly /> */}
+        <ResultPanel result={result} error={error} emptyText="実行するとサンプルに対する結果を確認できます。" />
         <JudgePanel result={judgeResult} />
       </form>
     </main>

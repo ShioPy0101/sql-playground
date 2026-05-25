@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -196,12 +197,22 @@ func equivalentCSV(left string, right string) bool {
 			return false
 		}
 		for cellIndex := range leftRows[rowIndex] {
-			if leftRows[rowIndex][cellIndex] != rightRows[rowIndex][cellIndex] {
+			if !equivalentCSVCell(leftRows[rowIndex][cellIndex], rightRows[rowIndex][cellIndex]) {
 				return false
 			}
 		}
 	}
 	return true
+}
+
+func equivalentCSVCell(left string, right string) bool {
+	if left == right {
+		return true
+	}
+
+	leftNumber, leftErr := strconv.ParseFloat(left, 64)
+	rightNumber, rightErr := strconv.ParseFloat(right, 64)
+	return leftErr == nil && rightErr == nil && leftNumber == rightNumber
 }
 
 func normalizedCSV(text string) ([][]string, error) {

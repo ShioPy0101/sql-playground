@@ -83,6 +83,39 @@ func TestTaskServiceSubmitReportsWrongAnswer(t *testing.T) {
 	}
 }
 
+func TestTaskServiceSubmitTreatsEquivalentNumbersAsEqual(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "009.json", `{
+		"number": 9,
+		"title": "Average",
+		"statement": "Average rows.",
+		"constraints": [],
+		"csv": "score\n100\n70",
+		"starterSql": "SELECT AVG(CAST(score AS INTEGER)) AS average_score FROM input;",
+		"solutionSql": "SELECT AVG(CAST(score AS INTEGER)) AS average_score FROM input;",
+		"expectedCsv": "average_score\n85.0\n",
+		"tests": [
+			{
+				"name": "sample",
+				"csv": "score\n100\n70",
+				"expectedCsv": "average_score\n85.0\n"
+			}
+		]
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	service := NewTaskService(NewSQLiteService())
+
+	result, err := service.Submit("9", "SELECT 85 AS average_score;")
+	if err != nil {
+		t.Fatalf("Submit returned error: %v", err)
+	}
+
+	if !result.Passed {
+		t.Fatalf("Submit() passed = false, want true: %#v", result)
+	}
+}
+
 func writeTaskFile(t *testing.T, dir string, fileName string, content string) {
 	t.Helper()
 

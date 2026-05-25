@@ -46,11 +46,11 @@ export function PlaygroundPage() {
     <main className="app-shell">
       <header className="app-header">
         <div>
-          <p className="eyebrow">SQLite CSV Runner</p>
-          <h1>SQL Playground</h1>
+          <p className="eyebrow">SQLite CSV実行環境</p>
+          <h1>SQLプレイグラウンド</h1>
         </div>
         <button form="sql-form" className="run-button" disabled={isRunning}>
-          {isRunning ? "Running..." : "Run SQL"}
+          {isRunning ? "実行中..." : "SQLを実行"}
         </button>
       </header>
 
@@ -59,14 +59,14 @@ export function PlaygroundPage() {
           title="CSV"
           label={tableLabel}
           value={csv}
-          ariaLabel="CSV input"
+          ariaLabel="CSV入力"
           onChange={setCSV}
         />
         <EditorPanel
           title="SQL"
           label="SQLite"
           value={query}
-          ariaLabel="SQL query"
+          ariaLabel="SQLクエリ"
           onChange={setQuery}
         />
         <ResultPanel result={result} error={error} emptyText="CSV と SQL を編集して実行してください。" />

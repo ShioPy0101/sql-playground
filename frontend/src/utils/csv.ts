@@ -31,7 +31,7 @@ export function parseResultSections(resultText: string): ResultSection[] {
 
   return sections.map((section) => {
     const body = section.lines.join("\n").trim();
-    const status = body === "OK" ? body : "";
+    const status = body === "OK" ? "成功" : "";
 
     return {
       title: section.title,
@@ -62,10 +62,10 @@ export function formatTableLabel(csvText: string) {
   const names = parseTableNames(csvText);
 
   if (names.length === 1) {
-    return `table: ${names[0]}`;
+    return `テーブル: ${names[0]}`;
   }
 
-  return `tables: ${names.join(", ")}`;
+  return `テーブル: ${names.join(", ")}`;
 }
 
 export function parseTableNames(csvText: string) {

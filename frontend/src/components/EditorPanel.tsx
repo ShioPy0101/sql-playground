@@ -3,6 +3,7 @@ type EditorPanelProps = {
   label: string;
   value: string;
   ariaLabel: string;
+  className?: string;
   readOnly?: boolean;
   onChange?: (value: string) => void;
 };
@@ -12,11 +13,12 @@ export function EditorPanel({
   label,
   value,
   ariaLabel,
+  className = "",
   readOnly = false,
   onChange
 }: EditorPanelProps) {
   return (
-    <section className="editor-panel" aria-label={ariaLabel}>
+    <section className={`editor-panel ${className}`.trim()} aria-label={ariaLabel}>
       <div className="panel-heading">
         <h2>{title}</h2>
         <span>{label}</span>

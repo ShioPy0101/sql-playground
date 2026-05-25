@@ -179,6 +179,125 @@ func TestTaskServiceSubmitForUserRecordsSubmission(t *testing.T) {
 	}
 }
 
+func TestTaskServiceListPublicTasks(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "002.json", `{
+		"number": 2,
+		"slug": "second",
+		"title": "Second task",
+		"statement": "Second statement.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": [
+			{
+				"name": "sample",
+				"csv": "id\n1",
+				"expectedCsv": "id\n1\n"
+			}
+		]
+	}`)
+	writeTaskFile(t, taskDir, "001.json", `{
+		"number": 1,
+		"slug": "first",
+		"title": "First task",
+		"statement": "First statement.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": []
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	service := newTestTaskService(t)
+
+	tasks, err := service.ListPublicTasks()
+	if err != nil {
+		t.Fatalf("ListPublicTasks returned error: %v", err)
+	}
+
+	if len(tasks) != 2 {
+		t.Fatalf("task count = %d, want 2", len(tasks))
+	}
+	if tasks[0].Number != 1 || tasks[0].Slug != "first" || tasks[0].Title != "First task" {
+		t.Fatalf("first task = %#v, want task 1", tasks[0])
+	}
+	if tasks[1].Number != 2 || tasks[1].TestCount != 1 {
+		t.Fatalf("second task = %#v, want task 2 with one test", tasks[1])
+	}
+}
+
+func TestTaskServiceAppliesUserProgress(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "001.json", `{
+		"number": 1,
+		"slug": "select-all",
+		"title": "Select all",
+		"statement": "Select all rows.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": [
+			{
+				"name": "sample",
+				"csv": "id\n1",
+				"expectedCsv": "id\n1\n"
+			}
+		]
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	service := newTestTaskService(t)
+
+	wrongQuery := "SELECT id FROM input WHERE id = '2';"
+	if _, err := service.SubmitForUser("1", wrongQuery, "user_progress"); err != nil {
+		t.Fatalf("wrong SubmitForUser returned error: %v", err)
+	}
+
+	tasks, err := service.ListPublicTasksForUser("user_progress")
+	if err != nil {
+		t.Fatalf("ListPublicTasksForUser returned error: %v", err)
+	}
+	if len(tasks) != 1 || !tasks[0].Answered || tasks[0].Solved {
+		t.Fatalf("task progress after wrong answer = %#v, want answered and unsolved", tasks)
+	}
+
+	task, err := service.GetPublicTaskForUser("1", "user_progress")
+	if err != nil {
+		t.Fatalf("GetPublicTaskForUser returned error: %v", err)
+	}
+	if task.SavedQuery != wrongQuery {
+		t.Fatalf("saved query = %q, want %q", task.SavedQuery, wrongQuery)
+	}
+
+	correctQuery := "SELECT id FROM input;"
+	if _, err := service.SubmitForUser("1", correctQuery, "user_progress"); err != nil {
+		t.Fatalf("correct SubmitForUser returned error: %v", err)
+	}
+
+	tasks, err = service.ListPublicTasksForUser("user_progress")
+	if err != nil {
+		t.Fatalf("ListPublicTasksForUser returned error: %v", err)
+	}
+	if !tasks[0].Answered || !tasks[0].Solved {
+		t.Fatalf("task progress after correct answer = %#v, want answered and solved", tasks[0])
+	}
+
+	task, err = service.GetPublicTaskForUser("1", "user_progress")
+	if err != nil {
+		t.Fatalf("GetPublicTaskForUser returned error: %v", err)
+	}
+	if task.SavedQuery != correctQuery {
+		t.Fatalf("saved query = %q, want latest query %q", task.SavedQuery, correctQuery)
+	}
+}
+
 func newTestTaskService(t *testing.T) *TaskService {
 	t.Helper()
 

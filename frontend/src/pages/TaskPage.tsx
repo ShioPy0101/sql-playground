@@ -35,7 +35,7 @@ export function TaskPage({ number }: TaskPageProps) {
           return;
         }
         setTask(payload);
-        setQuery(payload.starterSql);
+        setQuery(payload.savedQuery || payload.starterSql);
       })
       .catch((err) => {
         if (!ignore) {

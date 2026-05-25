@@ -1,8 +1,17 @@
 import { AdminPage } from "./pages/AdminPage";
 import { PlaygroundPage } from "./pages/PlaygroundPage";
+import { TaskListPage } from "./pages/TaskListPage";
 import { TaskPage } from "./pages/TaskPage";
 
 function App() {
+  if (window.location.pathname.match(/^\/?$/)) {
+    return <TaskListPage />;
+  }
+
+  if (window.location.pathname.match(/^\/sqlite\/?$/)) {
+    return <PlaygroundPage />;
+  }
+
   if (window.location.pathname.match(/^\/admin\/?$/)) {
     return <AdminPage />;
   }
@@ -12,7 +21,7 @@ function App() {
     return <TaskPage number={taskMatch[1]} />;
   }
 
-  return <PlaygroundPage />;
+  return <TaskListPage />;
 }
 
 export default App;

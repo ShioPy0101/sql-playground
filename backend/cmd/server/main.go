@@ -38,6 +38,7 @@ func main() {
 
 	sqliteAPI.POST("/execute", sqliteHandlerInstance.Execute)
 	api.GET("/me", taskHandlerInstance.CurrentUser)
+	taskAPI.GET("", taskHandlerInstance.List)
 	taskAPI.GET("/:number", taskHandlerInstance.Get)
 	taskAPI.POST("/:number/submit", taskHandlerInstance.Submit)
 	adminAPI.GET("/submissions", taskHandlerInstance.AdminSubmissions)

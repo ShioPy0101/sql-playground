@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +47,20 @@ type PublicTask struct {
 	StarterSQL  string       `json:"starterSql"`
 	ExpectedCSV string       `json:"expectedCsv"`
 	TestCount   int          `json:"testCount"`
+	SavedQuery  string       `json:"savedQuery,omitempty"`
+	Answered    bool         `json:"answered"`
+	Solved      bool         `json:"solved"`
+}
+
+type PublicTaskSummary struct {
+	Number    int        `json:"number"`
+	Slug      string     `json:"slug"`
+	Title     string     `json:"title"`
+	Statement string     `json:"statement"`
+	TestCount int        `json:"testCount"`
+	Answered  bool       `json:"answered"`
+	Solved    bool       `json:"solved"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
 type TaskSubmitResult struct {
@@ -79,6 +94,14 @@ type TaskSubmission struct {
 	SubmittedAt time.Time        `json:"submittedAt"`
 }
 
+type UserTaskProgress struct {
+	TaskNumber int
+	Answered   bool
+	Solved     bool
+	LastQuery  string
+	UpdatedAt  time.Time
+}
+
 func NewTaskService(sqliteService *SQLiteService) (*TaskService, error) {
 	return NewTaskServiceWithSubmissionDB(sqliteService, submissionsDBPath())
 }
@@ -97,12 +120,85 @@ func NewTaskServiceWithSubmissionDB(sqliteService *SQLiteService, dbPath string)
 }
 
 func (s *TaskService) GetPublicTask(number string) (PublicTask, error) {
+	return s.GetPublicTaskForUser(number, "")
+}
+
+func (s *TaskService) GetPublicTaskForUser(number string, userID string) (PublicTask, error) {
 	task, err := s.LoadTask(number)
 	if err != nil {
 		return PublicTask{}, err
 	}
 
-	return publicTask(task), nil
+	public := publicTask(task)
+	if userID == "" {
+		return public, nil
+	}
+
+	progress, err := s.submissions.ProgressByUser(userID)
+	if err != nil {
+		return PublicTask{}, err
+	}
+	applyProgressToTask(&public, progress[task.Number])
+
+	return public, nil
+}
+
+func (s *TaskService) ListPublicTasks() ([]PublicTaskSummary, error) {
+	return s.ListPublicTasksForUser("")
+}
+
+func (s *TaskService) ListPublicTasksForUser(userID string) ([]PublicTaskSummary, error) {
+	summaries := []PublicTaskSummary{}
+	seen := map[int]bool{}
+	progress := map[int]UserTaskProgress{}
+
+	if userID != "" {
+		var err error
+		progress, err = s.submissions.ProgressByUser(userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, dir := range s.taskDirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+				continue
+			}
+
+			content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				return nil, err
+			}
+
+			var task Task
+			if err := json.Unmarshal(content, &task); err != nil {
+				return nil, fmt.Errorf("invalid task file %s: %w", filepath.Join(dir, entry.Name()), err)
+			}
+			if seen[task.Number] {
+				continue
+			}
+
+			summary := publicTaskSummary(task)
+			applyProgressToSummary(&summary, progress[task.Number])
+			summaries = append(summaries, summary)
+			seen[task.Number] = true
+		}
+	}
+
+	sort.Slice(summaries, func(i, j int) bool {
+		return summaries[i].Number < summaries[j].Number
+	})
+
+	return summaries, nil
 }
 
 func (s *TaskService) Submit(number string, query string) (TaskSubmitResult, error) {
@@ -229,6 +325,30 @@ func publicTask(task Task) PublicTask {
 		StarterSQL:  task.StarterSQL,
 		ExpectedCSV: task.ExpectedCSV,
 		TestCount:   len(task.Tests),
+	}
+}
+
+func publicTaskSummary(task Task) PublicTaskSummary {
+	return PublicTaskSummary{
+		Number:    task.Number,
+		Slug:      task.Slug,
+		Title:     task.Title,
+		Statement: task.Statement,
+		TestCount: len(task.Tests),
+	}
+}
+
+func applyProgressToTask(task *PublicTask, progress UserTaskProgress) {
+	task.Answered = progress.Answered
+	task.Solved = progress.Solved
+	task.SavedQuery = progress.LastQuery
+}
+
+func applyProgressToSummary(summary *PublicTaskSummary, progress UserTaskProgress) {
+	summary.Answered = progress.Answered
+	summary.Solved = progress.Solved
+	if !progress.UpdatedAt.IsZero() {
+		summary.UpdatedAt = &progress.UpdatedAt
 	}
 }
 

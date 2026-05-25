@@ -23,7 +23,14 @@ func NewTaskHandler(service *service.TaskService) *TaskHandler {
 }
 
 func (h *TaskHandler) Get(c echo.Context) error {
-	task, err := h.service.GetPublicTask(c.Param("number"))
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to identify user",
+		})
+	}
+
+	task, err := h.service.GetPublicTaskForUser(c.Param("number"), userID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": err.Error(),
@@ -31,6 +38,26 @@ func (h *TaskHandler) Get(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, task)
+}
+
+func (h *TaskHandler) List(c echo.Context) error {
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to identify user",
+		})
+	}
+
+	tasks, err := h.service.ListPublicTasksForUser(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to load tasks",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string][]service.PublicTaskSummary{
+		"tasks": tasks,
+	})
 }
 
 func (h *TaskHandler) Submit(c echo.Context) error {

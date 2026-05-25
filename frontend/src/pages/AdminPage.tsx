@@ -52,8 +52,8 @@ export function AdminPage() {
           <p className="eyebrow">Admin</p>
           <h1>提出履歴</h1>
         </div>
-        <a className="secondary-link" href="/tasks/1">
-          課題へ
+        <a className="secondary-link" href="/">
+          問題一覧へ
         </a>
       </header>
 

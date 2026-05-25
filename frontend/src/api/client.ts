@@ -17,6 +17,24 @@ export type Task = {
   starterSql: string;
   expectedCsv: string;
   testCount: number;
+  savedQuery?: string;
+  answered: boolean;
+  solved: boolean;
+};
+
+export type TaskSummary = {
+  number: number;
+  slug: string;
+  title: string;
+  statement: string;
+  testCount: number;
+  answered: boolean;
+  solved: boolean;
+  updatedAt?: string;
+};
+
+export type TaskListResponse = {
+  tasks: TaskSummary[];
 };
 
 export type TaskSubmitResult = {
@@ -62,6 +80,10 @@ export async function fetchCurrentUser() {
 
 export async function fetchTask(number: string) {
   return getJSON<Task>(`/api/tasks/${number}`);
+}
+
+export async function fetchTasks() {
+  return getJSON<TaskListResponse>("/api/tasks");
 }
 
 export async function submitTask(number: string, query: string) {

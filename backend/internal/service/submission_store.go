@@ -120,6 +120,58 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 	return submissions, nil
 }
 
+func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgress, error) {
+	rows, err := s.db.Query(`
+		SELECT
+			task_number,
+			query,
+			passed,
+			submitted_at
+		FROM task_submissions
+		WHERE user_id = ?
+		ORDER BY submitted_at DESC, id DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	progress := map[int]UserTaskProgress{}
+	for rows.Next() {
+		var taskNumber int
+		var query string
+		var passed bool
+		var submittedAt string
+		if err := rows.Scan(&taskNumber, &query, &passed, &submittedAt); err != nil {
+			return nil, err
+		}
+
+		parsedAt, err := time.Parse(time.RFC3339Nano, submittedAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid submission timestamp for task %d: %w", taskNumber, err)
+		}
+
+		taskProgress := progress[taskNumber]
+		if !taskProgress.Answered {
+			taskProgress = UserTaskProgress{
+				TaskNumber: taskNumber,
+				Answered:   true,
+				LastQuery:  query,
+				UpdatedAt:  parsedAt,
+			}
+		}
+		if passed {
+			taskProgress.Solved = true
+		}
+		progress[taskNumber] = taskProgress
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return progress, nil
+}
+
 func (s *SubmissionStore) migrate() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS task_submissions (
@@ -139,6 +191,9 @@ func (s *SubmissionStore) migrate() error {
 
 		CREATE INDEX IF NOT EXISTS idx_task_submissions_user_id
 			ON task_submissions (user_id);
+
+		CREATE INDEX IF NOT EXISTS idx_task_submissions_user_task
+			ON task_submissions (user_id, task_number, submitted_at DESC, id DESC);
 	`)
 	return err
 }

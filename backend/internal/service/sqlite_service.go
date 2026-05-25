@@ -1,8 +1,15 @@
 package service
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/csv"
+	"fmt"
+	"io"
 	"os"
+	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type SQLiteService struct{}
@@ -12,8 +19,7 @@ func NewSQLiteService() *SQLiteService {
 }
 
 func (s *SQLiteService) Execute(csvText string, query string) (string, error) {
-
-	// 一時ファイルを作成
+	// クエリ実行ごとに独立した SQLite DB を作る。
 	tmpFile, err := os.CreateTemp("", "sqlite-playground-*.sqlite")
 	if err != nil {
 		return "", err
@@ -30,9 +36,310 @@ func (s *SQLiteService) Execute(csvText string, query string) (string, error) {
 	}
 	defer db.Close()
 
-	// 1. csvText からテーブル作成
-	// 2. query を実行
-	// 3. 結果を CSV 文字列にして返す
+	// 入力 CSV は固定テーブル名 input として読み込む。
+	if err := createInputTable(db, csvText); err != nil {
+		return "", err
+	}
 
-	return "", nil
+	// 複数クエリを順に実行し、追跡できるように結果へ見出しを付ける。
+	statements := splitSQLStatements(query)
+	if len(statements) == 0 {
+		return "", nil
+	}
+
+	results := make([]string, 0, len(statements))
+	for i, stmt := range statements {
+		result, err := executeStatement(db, stmt)
+		if err != nil {
+			return "", fmt.Errorf("query %d failed: %w", i+1, err)
+		}
+
+		if len(statements) > 1 {
+			results = append(results, fmt.Sprintf("-- Query %d: %s\n%s", i+1, stmt, result))
+			continue
+		}
+		results = append(results, result)
+	}
+
+	return strings.Join(results, "\n"), nil
+}
+
+func createInputTable(db *sql.DB, csvText string) error {
+	// 先頭行をヘッダとして扱い、すべて TEXT カラムで作成する。
+	reader := csv.NewReader(strings.NewReader(csvText))
+	reader.FieldsPerRecord = -1
+	reader.TrimLeadingSpace = true
+
+	headers, err := reader.Read()
+	if err != nil {
+		if err == io.EOF {
+			return fmt.Errorf("csv is empty")
+		}
+		return err
+	}
+	if len(headers) == 0 {
+		return fmt.Errorf("csv header is empty")
+	}
+
+	for i, header := range headers {
+		header = strings.TrimSpace(header)
+		if header == "" {
+			header = fmt.Sprintf("column_%d", i+1)
+		}
+		headers[i] = header
+	}
+
+	columnDefs := make([]string, len(headers))
+	for i, header := range headers {
+		columnDefs[i] = fmt.Sprintf("%s TEXT", quoteIdentifier(header))
+	}
+
+	if _, err := db.Exec(fmt.Sprintf("CREATE TABLE input (%s)", strings.Join(columnDefs, ", "))); err != nil {
+		return err
+	}
+
+	placeholders := make([]string, len(headers))
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+
+	insertSQL := fmt.Sprintf(
+		"INSERT INTO input (%s) VALUES (%s)",
+		quoteIdentifiers(headers),
+		strings.Join(placeholders, ", "),
+	)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(insertSQL)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		values := make([]any, len(headers))
+		for i := range headers {
+			if i < len(record) {
+				values[i] = record[i]
+			} else {
+				values[i] = ""
+			}
+		}
+
+		if _, err := stmt.Exec(values...); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func executeStatement(db *sql.DB, statement string) (string, error) {
+	// DDL/DML は結果行を持たないため Exec で実行し、成功だけを返す。
+	if !returnsRows(statement) {
+		if _, err := db.Exec(statement); err != nil {
+			return "", err
+		}
+		return "OK\n", nil
+	}
+
+	// SELECT などの結果行を持つ文は CSV 文字列へ変換する。
+	rows, err := db.Query(statement)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+	if len(columns) == 0 {
+		return "OK\n", nil
+	}
+
+	var output bytes.Buffer
+	writer := csv.NewWriter(&output)
+
+	if err := writer.Write(columns); err != nil {
+		return "", err
+	}
+
+	for rows.Next() {
+		rawValues := make([]sql.NullString, len(columns))
+		scanArgs := make([]any, len(columns))
+		for i := range rawValues {
+			scanArgs[i] = &rawValues[i]
+		}
+
+		if err := rows.Scan(scanArgs...); err != nil {
+			return "", err
+		}
+
+		record := make([]string, len(columns))
+		for i, value := range rawValues {
+			if value.Valid {
+				record[i] = value.String
+			}
+		}
+
+		if err := writer.Write(record); err != nil {
+			return "", err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return "", err
+	}
+
+	return output.String(), nil
+}
+
+func returnsRows(statement string) bool {
+	// 先頭キーワードで、結果セットを返すSQLかどうかを判定する。
+	firstWord := strings.ToUpper(firstSQLWord(statement))
+	switch firstWord {
+	case "SELECT", "WITH", "VALUES", "PRAGMA", "EXPLAIN":
+		return true
+	default:
+		return false
+	}
+}
+
+func firstSQLWord(statement string) string {
+	statement = strings.TrimSpace(statement)
+	for {
+		switch {
+		case strings.HasPrefix(statement, "--"):
+			lineEnd := strings.IndexByte(statement, '\n')
+			if lineEnd == -1 {
+				return ""
+			}
+			statement = strings.TrimSpace(statement[lineEnd+1:])
+		case strings.HasPrefix(statement, "/*"):
+			commentEnd := strings.Index(statement, "*/")
+			if commentEnd == -1 {
+				return ""
+			}
+			statement = strings.TrimSpace(statement[commentEnd+2:])
+		default:
+			for i, r := range statement {
+				if r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '(' {
+					return statement[:i]
+				}
+			}
+			return statement
+		}
+	}
+}
+
+func splitSQLStatements(query string) []string {
+	// 文字列リテラルやコメント内のセミコロンでは分割しない。
+	var statements []string
+	var current strings.Builder
+	var quote rune
+	inLineComment := false
+	inBlockComment := false
+	escaped := false
+
+	for i, r := range query {
+		next := rune(0)
+		if i+1 < len(query) {
+			next = rune(query[i+1])
+		}
+
+		if inLineComment {
+			current.WriteRune(r)
+			if r == '\n' {
+				inLineComment = false
+			}
+			continue
+		}
+		if inBlockComment {
+			current.WriteRune(r)
+			if r == '*' && next == '/' {
+				continue
+			}
+			if r == '/' && i > 0 && query[i-1] == '*' {
+				inBlockComment = false
+			}
+			continue
+		}
+
+		if quote == 0 && r == '-' && next == '-' {
+			inLineComment = true
+			current.WriteRune(r)
+			continue
+		}
+		if quote == 0 && r == '/' && next == '*' {
+			inBlockComment = true
+			current.WriteRune(r)
+			continue
+		}
+
+		if quote != 0 {
+			current.WriteRune(r)
+			if r == quote && !escaped {
+				quote = 0
+			}
+			escaped = r == '\\' && !escaped
+			if r != '\\' {
+				escaped = false
+			}
+			continue
+		}
+
+		if r == '\'' || r == '"' || r == '`' {
+			quote = r
+			current.WriteRune(r)
+			continue
+		}
+
+		if r == ';' {
+			statement := strings.TrimSpace(current.String())
+			if statement != "" {
+				statements = append(statements, statement)
+			}
+			current.Reset()
+			continue
+		}
+
+		current.WriteRune(r)
+	}
+
+	statement := strings.TrimSpace(current.String())
+	if statement != "" {
+		statements = append(statements, statement)
+	}
+
+	return statements
+}
+
+func quoteIdentifiers(identifiers []string) string {
+	quoted := make([]string, len(identifiers))
+	for i, identifier := range identifiers {
+		quoted[i] = quoteIdentifier(identifier)
+	}
+	return strings.Join(quoted, ", ")
+}
+
+func quoteIdentifier(identifier string) string {
+	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
 }

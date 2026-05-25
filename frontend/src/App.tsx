@@ -1,7 +1,12 @@
+import { AdminPage } from "./pages/AdminPage";
 import { PlaygroundPage } from "./pages/PlaygroundPage";
 import { TaskPage } from "./pages/TaskPage";
 
 function App() {
+  if (window.location.pathname.match(/^\/admin\/?$/)) {
+    return <AdminPage />;
+  }
+
   const taskMatch = window.location.pathname.match(/^\/tasks\/(\d+)\/?$/);
   if (taskMatch) {
     return <TaskPage number={taskMatch[1]} />;

@@ -20,6 +20,7 @@ func main() {
 
 	sqliteAPI := api.Group("/sqlite")
 	taskAPI := api.Group("/tasks")
+	adminAPI := api.Group("/admin")
 	// pandasAPI := api.Group("/pandas")
 
 	e.GET("/", func(c echo.Context) error {
@@ -33,8 +34,10 @@ func main() {
 	taskHandlerInstance := taskHandler.NewTaskHandler(taskService)
 
 	sqliteAPI.POST("/execute", sqliteHandlerInstance.Execute)
+	api.GET("/me", taskHandlerInstance.CurrentUser)
 	taskAPI.GET("/:number", taskHandlerInstance.Get)
 	taskAPI.POST("/:number/submit", taskHandlerInstance.Submit)
+	adminAPI.GET("/submissions", taskHandlerInstance.AdminSubmissions)
 	// pandasAPI.GET("/examples", pandasHandler.ListExamples)
 
 	e.Logger.Fatal(e.Start(serverAddress()))

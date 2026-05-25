@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 type Constraint struct {
@@ -63,6 +65,21 @@ type TaskCaseResult struct {
 type TaskService struct {
 	sqliteService *SQLiteService
 	taskDirs      []string
+	mu            sync.RWMutex
+	submissions   []TaskSubmission
+	nextID        int
+}
+
+type TaskSubmission struct {
+	ID          int              `json:"id"`
+	UserID      string           `json:"userId"`
+	TaskNumber  int              `json:"taskNumber"`
+	TaskSlug    string           `json:"taskSlug"`
+	TaskTitle   string           `json:"taskTitle"`
+	Query       string           `json:"query"`
+	Passed      bool             `json:"passed"`
+	Cases       []TaskCaseResult `json:"cases"`
+	SubmittedAt time.Time        `json:"submittedAt"`
 }
 
 func NewTaskService(sqliteService *SQLiteService) *TaskService {
@@ -82,6 +99,25 @@ func (s *TaskService) GetPublicTask(number string) (PublicTask, error) {
 }
 
 func (s *TaskService) Submit(number string, query string) (TaskSubmitResult, error) {
+	return s.submit(number, query, "")
+}
+
+func (s *TaskService) SubmitForUser(number string, query string, userID string) (TaskSubmitResult, error) {
+	return s.submit(number, query, userID)
+}
+
+func (s *TaskService) Submissions() []TaskSubmission {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	submissions := make([]TaskSubmission, len(s.submissions))
+	for i, submission := range s.submissions {
+		submissions[i] = copySubmission(submission)
+	}
+	return submissions
+}
+
+func (s *TaskService) submit(number string, query string, userID string) (TaskSubmitResult, error) {
 	task, err := s.LoadTask(number)
 	if err != nil {
 		return TaskSubmitResult{}, err
@@ -116,6 +152,10 @@ func (s *TaskService) Submit(number string, query string) (TaskSubmitResult, err
 			result.Passed = false
 		}
 		result.Cases = append(result.Cases, caseResult)
+	}
+
+	if userID != "" {
+		s.recordSubmission(task, query, result, userID)
 	}
 
 	return result, nil
@@ -236,4 +276,28 @@ func normalizedCSV(text string) ([][]string, error) {
 		rows = append(rows, record)
 	}
 	return rows, nil
+}
+
+func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.nextID++
+	submission := TaskSubmission{
+		ID:          s.nextID,
+		UserID:      userID,
+		TaskNumber:  task.Number,
+		TaskSlug:    task.Slug,
+		TaskTitle:   task.Title,
+		Query:       query,
+		Passed:      result.Passed,
+		Cases:       append([]TaskCaseResult(nil), result.Cases...),
+		SubmittedAt: time.Now().UTC(),
+	}
+	s.submissions = append([]TaskSubmission{submission}, s.submissions...)
+}
+
+func copySubmission(submission TaskSubmission) TaskSubmission {
+	submission.Cases = append([]TaskCaseResult(nil), submission.Cases...)
+	return submission
 }

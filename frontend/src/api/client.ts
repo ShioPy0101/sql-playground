@@ -32,8 +32,32 @@ export type TaskCaseResult = {
   error?: string;
 };
 
+export type CurrentUser = {
+  userId: string;
+};
+
+export type TaskSubmission = {
+  id: number;
+  userId: string;
+  taskNumber: number;
+  taskSlug: string;
+  taskTitle: string;
+  query: string;
+  passed: boolean;
+  cases: TaskCaseResult[];
+  submittedAt: string;
+};
+
+export type AdminSubmissionsResponse = {
+  submissions: TaskSubmission[];
+};
+
 export async function executeSQL(csv: string, query: string) {
   return postJSON<ExecuteResponse>("/api/sqlite/execute", { csv, query });
+}
+
+export async function fetchCurrentUser() {
+  return getJSON<CurrentUser>("/api/me");
 }
 
 export async function fetchTask(number: string) {
@@ -42,6 +66,10 @@ export async function fetchTask(number: string) {
 
 export async function submitTask(number: string, query: string) {
   return postJSON<TaskSubmitResult>(`/api/tasks/${number}/submit`, { query });
+}
+
+export async function fetchAdminSubmissions() {
+  return getJSON<AdminSubmissionsResponse>("/api/admin/submissions");
 }
 
 async function getJSON<T>(url: string) {

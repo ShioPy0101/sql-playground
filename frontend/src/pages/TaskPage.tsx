@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { fetchTask, submitTask, Task, TaskSubmitResult } from "../api/client";
+import { fetchCurrentUser, fetchTask, submitTask, Task, TaskSubmitResult } from "../api/client";
 import { EditorPanel } from "../components/EditorPanel";
 import { JudgePanel } from "../components/JudgePanel";
 import { ResultPanel } from "../components/ResultPanel";
@@ -16,6 +16,7 @@ export function TaskPage({ number }: TaskPageProps) {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState("");
   const [judgeResult, setJudgeResult] = useState<TaskSubmitResult | null>(null);
+  const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +47,26 @@ export function TaskPage({ number }: TaskPageProps) {
       ignore = true;
     };
   }, [number]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetchCurrentUser()
+      .then((payload) => {
+        if (!ignore) {
+          setUserId(payload.userId);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setUserId("");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   async function handleRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,6 +129,7 @@ export function TaskPage({ number }: TaskPageProps) {
         <div>
           <p className="eyebrow">SQL課題</p>
           <h4>{task.title}</h4>
+          {userId ? <p className="user-chip">User {userId.replace(/^user_/, "").slice(0, 10)}</p> : null}
         </div>
         <div className="task-actions">
           <button form="task-form" className="secondary-button" disabled={isRunning || isSubmitting}>

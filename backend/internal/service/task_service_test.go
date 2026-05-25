@@ -32,7 +32,7 @@ func TestTaskServiceSubmitComparesAllCases(t *testing.T) {
 	}`)
 
 	t.Setenv("TASKS_DIR", taskDir)
-	service := NewTaskService(NewSQLiteService())
+	service := newTestTaskService(t)
 
 	result, err := service.Submit("7", "SELECT COUNT(*) AS total FROM input;")
 	if err != nil {
@@ -68,7 +68,7 @@ func TestTaskServiceSubmitReportsWrongAnswer(t *testing.T) {
 	}`)
 
 	t.Setenv("TASKS_DIR", taskDir)
-	service := NewTaskService(NewSQLiteService())
+	service := newTestTaskService(t)
 
 	result, err := service.Submit("008", "SELECT id FROM input WHERE id = '1';")
 	if err != nil {
@@ -104,7 +104,7 @@ func TestTaskServiceSubmitTreatsEquivalentNumbersAsEqual(t *testing.T) {
 	}`)
 
 	t.Setenv("TASKS_DIR", taskDir)
-	service := NewTaskService(NewSQLiteService())
+	service := newTestTaskService(t)
 
 	result, err := service.Submit("9", "SELECT 85 AS average_score;")
 	if err != nil {
@@ -114,6 +114,79 @@ func TestTaskServiceSubmitTreatsEquivalentNumbersAsEqual(t *testing.T) {
 	if !result.Passed {
 		t.Fatalf("Submit() passed = false, want true: %#v", result)
 	}
+}
+
+func TestTaskServiceSubmitForUserRecordsSubmission(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "010.json", `{
+		"number": 10,
+		"slug": "select-all",
+		"title": "Select all",
+		"statement": "Select all rows.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": [
+			{
+				"name": "sample",
+				"csv": "id\n1",
+				"expectedCsv": "id\n1\n"
+			}
+		]
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	dbPath := filepath.Join(t.TempDir(), "submissions.sqlite")
+	service, err := NewTaskServiceWithSubmissionDB(NewSQLiteService(), dbPath)
+	if err != nil {
+		t.Fatalf("failed to create task service: %v", err)
+	}
+
+	result, err := service.SubmitForUser("10", "SELECT id FROM input;", "user_test")
+	if err != nil {
+		t.Fatalf("SubmitForUser returned error: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("SubmitForUser() passed = false, want true: %#v", result)
+	}
+
+	submissions, err := service.Submissions()
+	if err != nil {
+		t.Fatalf("Submissions returned error: %v", err)
+	}
+	if len(submissions) != 1 {
+		t.Fatalf("submission count = %d, want 1", len(submissions))
+	}
+	if submissions[0].UserID != "user_test" {
+		t.Fatalf("submission user = %q, want user_test", submissions[0].UserID)
+	}
+	if submissions[0].TaskNumber != 10 || submissions[0].TaskTitle != "Select all" {
+		t.Fatalf("submission task = %#v, want task 10 Select all", submissions[0])
+	}
+
+	reopened, err := NewTaskServiceWithSubmissionDB(NewSQLiteService(), dbPath)
+	if err != nil {
+		t.Fatalf("failed to reopen task service: %v", err)
+	}
+	persisted, err := reopened.Submissions()
+	if err != nil {
+		t.Fatalf("reopened Submissions returned error: %v", err)
+	}
+	if len(persisted) != 1 || persisted[0].UserID != "user_test" {
+		t.Fatalf("persisted submissions = %#v, want one user_test submission", persisted)
+	}
+}
+
+func newTestTaskService(t *testing.T) *TaskService {
+	t.Helper()
+
+	service, err := NewTaskServiceWithSubmissionDB(NewSQLiteService(), filepath.Join(t.TempDir(), "submissions.sqlite"))
+	if err != nil {
+		t.Fatalf("failed to create task service: %v", err)
+	}
+	return service
 }
 
 func writeTaskFile(t *testing.T, dir string, fileName string, content string) {

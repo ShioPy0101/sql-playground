@@ -1,7 +1,10 @@
 package taskHandler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
+	"time"
 
 	"github.com/ShioPy0101/sql-playground/internal/service"
 	"github.com/labstack/echo/v4"
@@ -38,7 +41,14 @@ func (h *TaskHandler) Submit(c echo.Context) error {
 		})
 	}
 
-	result, err := h.service.Submit(c.Param("number"), req.Query)
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to identify user",
+		})
+	}
+
+	result, err := h.service.SubmitForUser(c.Param("number"), req.Query, userID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": err.Error(),
@@ -46,4 +56,60 @@ func (h *TaskHandler) Submit(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, result)
+}
+
+func (h *TaskHandler) CurrentUser(c echo.Context) error {
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to identify user",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"userId": userID})
+}
+
+func (h *TaskHandler) AdminSubmissions(c echo.Context) error {
+	submissions, err := h.service.Submissions()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to load submissions",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string][]service.TaskSubmission{
+		"submissions": submissions,
+	})
+}
+
+const userCookieName = "sql_playground_user_id"
+
+func ensureUserID(c echo.Context) (string, error) {
+	if cookie, err := c.Cookie(userCookieName); err == nil && cookie.Value != "" {
+		return cookie.Value, nil
+	}
+
+	userID, err := newUserID()
+	if err != nil {
+		return "", err
+	}
+
+	c.SetCookie(&http.Cookie{
+		Name:     userCookieName,
+		Value:    userID,
+		Path:     "/",
+		Expires:  time.Now().AddDate(1, 0, 0),
+		MaxAge:   60 * 60 * 24 * 365,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return userID, nil
+}
+
+func newUserID() (string, error) {
+	bytes := make([]byte, 12)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return "user_" + hex.EncodeToString(bytes), nil
 }

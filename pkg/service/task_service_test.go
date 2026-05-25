@@ -331,6 +331,8 @@ func TestTaskServiceAppliesUserProgress(t *testing.T) {
 
 func newTestTaskService(t *testing.T) *TaskService {
 	t.Helper()
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("POSTGRES_URL", "")
 
 	service, err := NewTaskServiceWithSubmissionDB(NewSQLiteService(), filepath.Join(t.TempDir(), "submissions.sqlite"))
 	if err != nil {

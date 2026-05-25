@@ -57,6 +57,7 @@ function App() {
 
   return (
     <main className="app-shell">
+      {/* ヘッダー */}
       <header className="app-header">
         <div>
           <p className="eyebrow">SQLite CSV Runner</p>
@@ -67,6 +68,7 @@ function App() {
         </button>
       </header>
 
+      {/* データ入力欄 */}
       <form id="sql-form" className="workspace" onSubmit={executeSQL}>
         <section className="editor-panel" aria-label="CSV input">
           <div className="panel-heading">

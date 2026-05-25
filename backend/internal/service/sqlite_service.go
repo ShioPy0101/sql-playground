@@ -36,8 +36,8 @@ func (s *SQLiteService) Execute(csvText string, query string) (string, error) {
 	}
 	defer db.Close()
 
-	// 入力 CSV は固定テーブル名 input として読み込む。
-	if err := createInputTable(db, csvText); err != nil {
+	// 単一 CSV は input、複数 CSV はセクション見出しのテーブル名で読み込む。
+	if err := createInputTables(db, csvText); err != nil {
 		return "", err
 	}
 
@@ -64,7 +64,101 @@ func (s *SQLiteService) Execute(csvText string, query string) (string, error) {
 	return strings.Join(results, "\n"), nil
 }
 
-func createInputTable(db *sql.DB, csvText string) error {
+type csvTable struct {
+	name string
+	csv  string
+}
+
+func createInputTables(db *sql.DB, csvText string) error {
+	tables, err := parseCSVTables(csvText)
+	if err != nil {
+		return err
+	}
+
+	seen := make(map[string]struct{}, len(tables))
+	for _, table := range tables {
+		normalizedName := strings.ToLower(table.name)
+		if _, ok := seen[normalizedName]; ok {
+			return fmt.Errorf("duplicate table name: %s", table.name)
+		}
+		seen[normalizedName] = struct{}{}
+
+		if err := createCSVTable(db, table.name, table.csv); err != nil {
+			return fmt.Errorf("table %s: %w", table.name, err)
+		}
+	}
+
+	return nil
+}
+
+func parseCSVTables(csvText string) ([]csvTable, error) {
+	var tables []csvTable
+	currentName := "input"
+	var currentCSV strings.Builder
+	sawMarker := false
+
+	for _, line := range strings.Split(csvText, "\n") {
+		if tableName, ok := parseTableMarker(line); ok {
+			csvPart := trimLineBreaks(currentCSV.String())
+			if strings.TrimSpace(csvPart) != "" {
+				if !sawMarker {
+					return nil, fmt.Errorf("csv before first table marker is not supported")
+				}
+				tables = append(tables, csvTable{name: currentName, csv: csvPart})
+			}
+
+			currentName = tableName
+			currentCSV.Reset()
+			sawMarker = true
+			continue
+		}
+
+		currentCSV.WriteString(line)
+		currentCSV.WriteByte('\n')
+	}
+
+	csvPart := trimLineBreaks(currentCSV.String())
+	if strings.TrimSpace(csvPart) != "" {
+		tables = append(tables, csvTable{name: currentName, csv: csvPart})
+	}
+
+	if len(tables) == 0 {
+		return nil, fmt.Errorf("csv is empty")
+	}
+
+	return tables, nil
+}
+
+func trimLineBreaks(text string) string {
+	return strings.Trim(text, "\r\n")
+}
+
+func parseTableMarker(line string) (string, bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return "", false
+	}
+
+	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+		name := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(trimmed, "["), "]"))
+		if name != "" {
+			return name, true
+		}
+	}
+
+	for _, prefix := range []string{"# table:", "-- table:"} {
+		if strings.HasPrefix(strings.ToLower(trimmed), prefix) {
+			name := strings.TrimSpace(trimmed[len(prefix):])
+			if name != "" {
+				return name, true
+			}
+		}
+	}
+
+	return "", false
+}
+
+func createCSVTable(db *sql.DB, tableName string, csvText string) error {
 	// 先頭行をヘッダとして扱い、すべて TEXT カラムで作成する。
 	reader := csv.NewReader(strings.NewReader(csvText))
 	reader.FieldsPerRecord = -1
@@ -94,7 +188,7 @@ func createInputTable(db *sql.DB, csvText string) error {
 		columnDefs[i] = fmt.Sprintf("%s TEXT", quoteIdentifier(header))
 	}
 
-	if _, err := db.Exec(fmt.Sprintf("CREATE TABLE input (%s)", strings.Join(columnDefs, ", "))); err != nil {
+	if _, err := db.Exec(fmt.Sprintf("CREATE TABLE %s (%s)", quoteIdentifier(tableName), strings.Join(columnDefs, ", "))); err != nil {
 		return err
 	}
 
@@ -104,7 +198,8 @@ func createInputTable(db *sql.DB, csvText string) error {
 	}
 
 	insertSQL := fmt.Sprintf(
-		"INSERT INTO input (%s) VALUES (%s)",
+		"INSERT INTO %s (%s) VALUES (%s)",
+		quoteIdentifier(tableName),
 		quoteIdentifiers(headers),
 		strings.Join(placeholders, ", "),
 	)

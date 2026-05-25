@@ -49,6 +49,63 @@ func TestSQLiteServiceExecuteMultipleQueriesAddsTraceHeaders(t *testing.T) {
 	}
 }
 
+func TestSQLiteServiceExecuteMultipleTables(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.Execute(
+		`# table: users
+id,name
+1,Ada
+2,Linus
+
+# table: orders
+id,user_id,total
+100,1,48
+101,1,52
+102,2,37
+`,
+		`
+			SELECT users.name, SUM(CAST(orders.total AS INTEGER)) AS total
+			FROM users
+			JOIN orders ON orders.user_id = users.id
+			GROUP BY users.id, users.name
+			ORDER BY total DESC;
+		`,
+	)
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	want := "name,total\nAda,100\nLinus,37\n"
+	if got != want {
+		t.Fatalf("Execute() = %q, want %q", got, want)
+	}
+}
+
+func TestSQLiteServiceExecuteMultipleTablesWithBracketMarkers(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.Execute(
+		`[users]
+id,name
+1,Ada
+
+[teams]
+user_id,team
+1,core
+`,
+		`SELECT users.name, teams.team FROM users JOIN teams ON teams.user_id = users.id`,
+	)
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	want := "name,team\nAda,core\n"
+	if got != want {
+		t.Fatalf("Execute() = %q, want %q", got, want)
+	}
+}
+
 func TestSplitSQLStatementsIgnoresSemicolonInString(t *testing.T) {
 	got := splitSQLStatements(`SELECT 'a;b'; SELECT "c;d"`)
 	want := []string{`SELECT 'a;b'`, `SELECT "c;d"`}

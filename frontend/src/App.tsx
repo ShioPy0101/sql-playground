@@ -18,6 +18,12 @@ type ExecuteResponse = {
   csv: string;
 };
 
+type ResultSection = {
+  title: string;
+  rows: string[][];
+  status: string;
+};
+
 function App() {
   const [csv, setCSV] = useState(sampleCSV);
   const [query, setQuery] = useState(sampleQuery);
@@ -25,7 +31,8 @@ function App() {
   const [error, setError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
 
-  const previewRows = useMemo(() => parseCSVPreview(result), [result]);
+  const resultSections = useMemo(() => parseResultSections(result), [result]);
+  const resultRowCount = useMemo(() => countResultRows(resultSections), [resultSections]);
   const tableLabel = useMemo(() => formatTableLabel(csv), [csv]);
 
   async function executeSQL(event: FormEvent<HTMLFormElement>) {
@@ -100,31 +107,23 @@ function App() {
         <section className="result-panel" aria-label="Query result">
           <div className="panel-heading">
             <h2>Result</h2>
-            <span>{result ? `${previewRows.length} rows` : "waiting"}</span>
+            <span>{result ? `${resultRowCount} rows` : "waiting"}</span>
           </div>
 
           {error ? <pre className="error-output">{error}</pre> : null}
 
-          {!error && previewRows.length > 0 ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {previewRows[0].map((cell) => (
-                      <th key={cell}>{cell}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewRows.slice(1).map((row, rowIndex) => (
-                    <tr key={`${row.join("-")}-${rowIndex}`}>
-                      {row.map((cell, cellIndex) => (
-                        <td key={`${cell}-${cellIndex}`}>{cell}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {!error && resultSections.length > 0 ? (
+            <div className="result-content">
+              {resultSections.map((section, sectionIndex) => (
+                <div className="result-section" key={`${section.title}-${sectionIndex}`}>
+                  {section.title ? <p className="query-title">{section.title}</p> : null}
+                  {section.status ? (
+                    <p className="status-output">{section.status}</p>
+                  ) : (
+                    <ResultTable rows={section.rows} />
+                  )}
+                </div>
+              ))}
             </div>
           ) : null}
 
@@ -133,12 +132,85 @@ function App() {
               <p>CSV と SQL を編集して実行してください。</p>
             </div>
           ) : null}
-
-          {!error && result ? <pre className="raw-output">{result}</pre> : null}
         </section>
       </form>
     </main>
   );
+}
+
+function ResultTable({ rows }: { rows: string[][] }) {
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {rows[0].map((cell, cellIndex) => (
+              <th key={`${cell}-${cellIndex}`}>{cell}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(1).map((row, rowIndex) => (
+            <tr key={`${row.join("-")}-${rowIndex}`}>
+              {row.map((cell, cellIndex) => (
+                <td key={`${cell}-${cellIndex}`}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function parseResultSections(resultText: string): ResultSection[] {
+  const trimmed = resultText.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const sections: Array<{ title: string; lines: string[] }> = [];
+  let current = { title: "", lines: [] as string[] };
+
+  for (const line of trimmed.split("\n")) {
+    if (line.startsWith("-- Query ")) {
+      if (current.title || current.lines.length > 0) {
+        sections.push(current);
+      }
+      current = { title: line.replace(/^--\s*/, ""), lines: [] };
+      continue;
+    }
+
+    current.lines.push(line);
+  }
+
+  if (current.title || current.lines.length > 0) {
+    sections.push(current);
+  }
+
+  return sections.map((section) => {
+    const body = section.lines.join("\n").trim();
+    const status = body === "OK" ? body : "";
+
+    return {
+      title: section.title,
+      rows: status ? [] : parseCSVPreview(body),
+      status
+    };
+  });
+}
+
+function countResultRows(sections: ResultSection[]) {
+  return sections.reduce((total, section) => {
+    if (section.status) {
+      return total;
+    }
+    return total + Math.max(section.rows.length - 1, 0);
+  }, 0);
 }
 
 function parseCSVPreview(csvText: string) {

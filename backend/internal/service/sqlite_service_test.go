@@ -49,6 +49,28 @@ func TestSQLiteServiceExecuteMultipleQueriesAddsTraceHeaders(t *testing.T) {
 	}
 }
 
+func TestSQLiteServiceExecuteMultipleQueriesCompactsTraceHeaders(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.Execute(
+		"id,name\n1,Ada\n2,Linus\n",
+		`
+			SELECT
+				name
+			FROM input
+			ORDER BY id;
+			SELECT count(*) AS total FROM input;
+		`,
+	)
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	if !strings.Contains(got, "-- Query 1: SELECT name FROM input ORDER BY id") {
+		t.Fatalf("Execute() output did not compact query header:\n%s", got)
+	}
+}
+
 func TestSQLiteServiceExecuteMultipleTables(t *testing.T) {
 	service := NewSQLiteService()
 

@@ -55,13 +55,17 @@ func (s *SQLiteService) Execute(csvText string, query string) (string, error) {
 		}
 
 		if len(statements) > 1 {
-			results = append(results, fmt.Sprintf("-- Query %d: %s\n%s", i+1, stmt, result))
+			results = append(results, fmt.Sprintf("-- Query %d: %s\n%s", i+1, compactSQL(stmt), result))
 			continue
 		}
 		results = append(results, result)
 	}
 
 	return strings.Join(results, "\n"), nil
+}
+
+func compactSQL(statement string) string {
+	return strings.Join(strings.Fields(statement), " ")
 }
 
 type csvTable struct {

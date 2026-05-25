@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -65,9 +64,7 @@ type TaskCaseResult struct {
 type TaskService struct {
 	sqliteService *SQLiteService
 	taskDirs      []string
-	mu            sync.RWMutex
-	submissions   []TaskSubmission
-	nextID        int
+	submissions   *SubmissionStore
 }
 
 type TaskSubmission struct {
@@ -82,11 +79,21 @@ type TaskSubmission struct {
 	SubmittedAt time.Time        `json:"submittedAt"`
 }
 
-func NewTaskService(sqliteService *SQLiteService) *TaskService {
+func NewTaskService(sqliteService *SQLiteService) (*TaskService, error) {
+	return NewTaskServiceWithSubmissionDB(sqliteService, submissionsDBPath())
+}
+
+func NewTaskServiceWithSubmissionDB(sqliteService *SQLiteService, dbPath string) (*TaskService, error) {
+	submissions, err := NewSubmissionStore(dbPath)
+	if err != nil {
+		return nil, err
+	}
+
 	return &TaskService{
 		sqliteService: sqliteService,
 		taskDirs:      taskDirectories(),
-	}
+		submissions:   submissions,
+	}, nil
 }
 
 func (s *TaskService) GetPublicTask(number string) (PublicTask, error) {
@@ -106,15 +113,8 @@ func (s *TaskService) SubmitForUser(number string, query string, userID string) 
 	return s.submit(number, query, userID)
 }
 
-func (s *TaskService) Submissions() []TaskSubmission {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	submissions := make([]TaskSubmission, len(s.submissions))
-	for i, submission := range s.submissions {
-		submissions[i] = copySubmission(submission)
-	}
-	return submissions
+func (s *TaskService) Submissions() ([]TaskSubmission, error) {
+	return s.submissions.List()
 }
 
 func (s *TaskService) submit(number string, query string, userID string) (TaskSubmitResult, error) {
@@ -155,7 +155,9 @@ func (s *TaskService) submit(number string, query string, userID string) (TaskSu
 	}
 
 	if userID != "" {
-		s.recordSubmission(task, query, result, userID)
+		if err := s.recordSubmission(task, query, result, userID); err != nil {
+			return TaskSubmitResult{}, err
+		}
 	}
 
 	return result, nil
@@ -206,6 +208,14 @@ func taskDirectories() []string {
 	}
 
 	return []string{"tasks", "backend/tasks"}
+}
+
+func submissionsDBPath() string {
+	if path := os.Getenv("SUBMISSIONS_DB_PATH"); path != "" {
+		return path
+	}
+
+	return filepath.Join("data", "submissions.sqlite")
 }
 
 func publicTask(task Task) PublicTask {
@@ -278,13 +288,8 @@ func normalizedCSV(text string) ([][]string, error) {
 	return rows, nil
 }
 
-func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.nextID++
+func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string) error {
 	submission := TaskSubmission{
-		ID:          s.nextID,
 		UserID:      userID,
 		TaskNumber:  task.Number,
 		TaskSlug:    task.Slug,
@@ -294,10 +299,5 @@ func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmi
 		Cases:       append([]TaskCaseResult(nil), result.Cases...),
 		SubmittedAt: time.Now().UTC(),
 	}
-	s.submissions = append([]TaskSubmission{submission}, s.submissions...)
-}
-
-func copySubmission(submission TaskSubmission) TaskSubmission {
-	submission.Cases = append([]TaskCaseResult(nil), submission.Cases...)
-	return submission
+	return s.submissions.Insert(submission)
 }

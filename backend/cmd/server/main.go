@@ -28,7 +28,10 @@ func main() {
 	})
 
 	sqliteService := service.NewSQLiteService()
-	taskService := service.NewTaskService(sqliteService)
+	taskService, err := service.NewTaskService(sqliteService)
+	if err != nil {
+		e.Logger.Fatal(err)
+	}
 
 	sqliteHandlerInstance := sqliteHandler.NewSQLiteHandler(sqliteService)
 	taskHandlerInstance := taskHandler.NewTaskHandler(taskService)

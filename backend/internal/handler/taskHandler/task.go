@@ -70,8 +70,15 @@ func (h *TaskHandler) CurrentUser(c echo.Context) error {
 }
 
 func (h *TaskHandler) AdminSubmissions(c echo.Context) error {
+	submissions, err := h.service.Submissions()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to load submissions",
+		})
+	}
+
 	return c.JSON(http.StatusOK, map[string][]service.TaskSubmission{
-		"submissions": h.service.Submissions(),
+		"submissions": submissions,
 	})
 }
 

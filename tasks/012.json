@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[orders]\nid,customer,total\n1,Aoi,1200\n2,Ren,800\n3,Aoi,500\n4,Mio,1400\n5,Ren,900",
-  "starterSql": "SELECT\n  customer,\n  SUM(CAST(total AS INTEGER)) AS total_amount\nFROM orders\nGROUP BY customer\nHAVING -- 集計結果の条件を書きます\nORDER BY total_amount DESC, customer ASC;",
-  "solutionSql": "SELECT\n  customer,\n  SUM(CAST(total AS INTEGER)) AS total_amount\nFROM orders\nGROUP BY customer\nHAVING SUM(CAST(total AS INTEGER)) >= 1500\nORDER BY total_amount DESC, customer ASC;",
+  "starterSql": "SELECT\n  customer,\n  SUM(total) AS total_amount\nFROM orders\nGROUP BY customer\nHAVING -- 集計結果の条件を書きます\nORDER BY total_amount DESC, customer ASC;",
+  "solutionSql": "SELECT\n  customer,\n  SUM(total) AS total_amount\nFROM orders\nGROUP BY customer\nHAVING SUM(total) >= 1500\nORDER BY total_amount DESC, customer ASC;",
   "expectedCsv": "customer,total_amount\nAoi,1700\nRen,1700\n",
   "tests": [
     {

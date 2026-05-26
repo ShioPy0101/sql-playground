@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,2,800\n103,1,500\n104,3,2000",
-  "starterSql": "SELECT\n  customers.name AS customer_name,\n  SUM(CAST(orders.total AS INTEGER)) AS total_amount\nFROM customers\nINNER JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY total_amount DESC, customer_name ASC;",
-  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  SUM(CAST(orders.total AS INTEGER)) AS total_amount\nFROM customers\nINNER JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY total_amount DESC, customer_name ASC;",
+  "starterSql": "SELECT\n  customers.name AS customer_name,\n  SUM(orders.total) AS total_amount\nFROM customers\nINNER JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY total_amount DESC, customer_name ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  SUM(orders.total) AS total_amount\nFROM customers\nINNER JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY total_amount DESC, customer_name ASC;",
   "expectedCsv": "customer_name,total_amount\nMio,2000\nAoi,1700\nRen,800\n",
   "tests": [
     {

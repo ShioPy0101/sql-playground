@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[orders]\nid,customer_name,status,ordered_at,total,memo\n1,Aoi,paid,2026-05-03,1200,first\n2,Ren,canceled,2026-05-04,3000,cancel\n3,Mio,paid,2026-04-28,900,old\n4,Sora,paid,2026-05-02,2500,gift\n5,Yui,paid,2026-05-10,2500,repeat",
-  "starterSql": "SELECT\n  id,\n  customer_name,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE status = 'paid'\n  AND ordered_at >= '2026-05-01'\nORDER BY total DESC, id ASC;",
-  "solutionSql": "SELECT\n  id,\n  customer_name,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE status = 'paid'\n  AND ordered_at >= '2026-05-01'\nORDER BY total DESC, id ASC;",
+  "starterSql": "SELECT\n  id,\n  customer_name,\n  total\nFROM orders\nWHERE status = 'paid'\n  AND ordered_at >= '2026-05-01'\nORDER BY total DESC, id ASC;",
+  "solutionSql": "SELECT\n  id,\n  customer_name,\n  total\nFROM orders\nWHERE status = 'paid'\n  AND ordered_at >= '2026-05-01'\nORDER BY total DESC, id ASC;",
   "expectedCsv": "id,customer_name,total\n4,Sora,2500\n5,Yui,2500\n1,Aoi,1200\n",
   "tests": [
     {

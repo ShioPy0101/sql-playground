@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,1,800\n103,2,1500\n104,4,700\n105,4,300",
-  "starterSql": "SELECT\n  customers.name AS customer_name,\n  COUNT(orders.id) AS order_count,\n  COALESCE(SUM(CAST(orders.total AS INTEGER)), 0) AS total_amount\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY customers.name ASC;",
-  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  COUNT(orders.id) AS order_count,\n  COALESCE(SUM(CAST(orders.total AS INTEGER)), 0) AS total_amount\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY customers.name ASC;",
+  "starterSql": "SELECT\n  customers.name AS customer_name,\n  COUNT(orders.id) AS order_count,\n  COALESCE(SUM(orders.total), 0) AS total_amount\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY customers.name ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  COUNT(orders.id) AS order_count,\n  COALESCE(SUM(orders.total), 0) AS total_amount\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY customers.name ASC;",
   "expectedCsv": "customer_name,order_count,total_amount\nAoi,2,2000\nMio,0,0\nRen,1,1500\nSora,2,1000\n",
   "tests": [
     {

@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[orders]\nid,customer_id,status,total\n1,1,paid,1200\n2,1,canceled,800\n3,1,paid,500\n4,2,canceled,2000\n5,3,paid,3000\n6,3,pending,400\n7,3,canceled,100",
-  "starterSql": "SELECT\n  customer_id,\n  SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count,\n  SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS canceled_count,\n  SUM(CASE WHEN status = 'paid' THEN CAST(total AS INTEGER) ELSE 0 END) AS paid_total\nFROM orders\nGROUP BY customer_id\n-- paid_count が1以上の顧客だけにします\nORDER BY paid_total DESC, CAST(customer_id AS INTEGER) ASC;",
-  "solutionSql": "SELECT\n  customer_id,\n  SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count,\n  SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS canceled_count,\n  SUM(CASE WHEN status = 'paid' THEN CAST(total AS INTEGER) ELSE 0 END) AS paid_total\nFROM orders\nGROUP BY customer_id\nHAVING SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) >= 1\nORDER BY paid_total DESC, CAST(customer_id AS INTEGER) ASC;",
+  "starterSql": "SELECT\n  customer_id,\n  SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count,\n  SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS canceled_count,\n  SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END) AS paid_total\nFROM orders\nGROUP BY customer_id\n-- paid_count が1以上の顧客だけにします\nORDER BY paid_total DESC, customer_id ASC;",
+  "solutionSql": "SELECT\n  customer_id,\n  SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count,\n  SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS canceled_count,\n  SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END) AS paid_total\nFROM orders\nGROUP BY customer_id\nHAVING SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) >= 1\nORDER BY paid_total DESC, customer_id ASC;",
   "expectedCsv": "customer_id,paid_count,canceled_count,paid_total\n3,1,1,3000\n1,2,1,1700\n",
   "tests": [
     {

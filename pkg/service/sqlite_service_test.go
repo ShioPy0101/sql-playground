@@ -87,7 +87,7 @@ id,user_id,total
 102,2,37
 `,
 		`
-			SELECT users.name, SUM(CAST(orders.total AS INTEGER)) AS total
+			SELECT users.name, SUM(orders.total) AS total
 			FROM users
 			JOIN orders ON orders.user_id = users.id
 			GROUP BY users.id, users.name
@@ -99,6 +99,52 @@ id,user_id,total
 	}
 
 	want := "name,total\nAda,100\nLinus,37\n"
+	if got != want {
+		t.Fatalf("Execute() = %q, want %q", got, want)
+	}
+}
+
+func TestSQLiteServiceExecuteInfersIntegerColumns(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.Execute(
+		`[orders]
+id,total
+1,9
+2,100
+10,20
+`,
+		`
+			SELECT id, total
+			FROM orders
+			ORDER BY total DESC, id ASC;
+		`,
+	)
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	want := "id,total\n2,100\n10,20\n1,9\n"
+	if got != want {
+		t.Fatalf("Execute() = %q, want %q", got, want)
+	}
+}
+
+func TestSQLiteServiceExecuteKeepsLeadingZeroColumnsAsText(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.Execute(
+		`code
+001
+010
+`,
+		`SELECT code FROM input ORDER BY code DESC;`,
+	)
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	want := "code\n010\n001\n"
 	if got != want {
 		t.Fatalf("Execute() = %q, want %q", got, want)
 	}

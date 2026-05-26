@@ -1,0 +1,28 @@
+{
+  "number": 7,
+  "slug": "count-rows-confirm",
+  "title": "[確認しよう] COUNTで行数を数える",
+  "statement": "orders テーブルの行数を total_orders という列名で表示してください。\n\nCOUNT(*) は行数を数える集計関数です。集計関数は、複数の行をまとめて1つの値にします。\nAS total_orders は、結果の列名に別名をつける書き方です。画面に出る列名が total_orders になります。\n\nこの問題は確認用です。COUNT(*) と AS の形をそのまま実行して確認しましょう。",
+  "constraints": [
+    {
+      "name": "集計",
+      "value": "orders テーブルの全行数を数えます"
+    }
+  ],
+  "csv": "[orders]\nid,customer,total\n1,Aoi,1200\n2,Ren,800\n3,Aoi,500",
+  "starterSql": "SELECT\n  COUNT(*) AS total_orders\nFROM orders;",
+  "solutionSql": "SELECT\n  COUNT(*) AS total_orders\nFROM orders;",
+  "expectedCsv": "total_orders\n3\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[orders]\nid,customer,total\n1,Aoi,1200\n2,Ren,800\n3,Aoi,500",
+      "expectedCsv": "total_orders\n3\n"
+    },
+    {
+      "name": "5件",
+      "csv": "[orders]\nid,customer,total\n1,A,100\n2,B,200\n3,C,300\n4,D,400\n5,E,500",
+      "expectedCsv": "total_orders\n5\n"
+    }
+  ]
+}

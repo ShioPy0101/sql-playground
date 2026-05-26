@@ -1,0 +1,32 @@
+{
+  "number": 17,
+  "slug": "left-join-confirm",
+  "title": "[確認しよう] LEFT JOINで左の表を残す",
+  "statement": "customers と orders を LEFT JOIN して、すべての顧客について customer_name と order_id を表示してください。\n\nINNER JOIN は両方に対応する行があるものだけを出します。一方、LEFT JOIN は左側に書いたテーブルの行をすべて残します。\n今回の左側は customers です。注文がない顧客も結果に残り、その order_id は空になります。\n\nこの問題は確認用です。INNER JOIN との違いとして「左の表の行が消えない」ことを確認しましょう。",
+  "constraints": [
+    {
+      "name": "結合の種類",
+      "value": "LEFT JOIN を使います"
+    },
+    {
+      "name": "並び順",
+      "value": "customer id、order id の昇順です"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,1,500\n103,2,800",
+  "starterSql": "SELECT\n  customers.name AS customer_name,\n  orders.id AS order_id\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nORDER BY CAST(customers.id AS INTEGER) ASC, CAST(orders.id AS INTEGER) ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  orders.id AS order_id\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nORDER BY CAST(customers.id AS INTEGER) ASC, CAST(orders.id AS INTEGER) ASC;",
+  "expectedCsv": "customer_name,order_id\nAoi,101\nAoi,102\nRen,103\nMio,\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,1,500\n103,2,800",
+      "expectedCsv": "customer_name,order_id\nAoi,101\nAoi,102\nRen,103\nMio,\n"
+    },
+    {
+      "name": "注文なしが先頭",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id,total\n201,2,300",
+      "expectedCsv": "customer_name,order_id\nYui,\nKai,201\n"
+    }
+  ]
+}

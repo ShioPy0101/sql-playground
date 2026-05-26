@@ -1,0 +1,28 @@
+{
+  "number": 2,
+  "slug": "select-book-columns",
+  "title": "[書いてみよう] 必要な列だけ選ぶ",
+  "statement": "books テーブルから title と author だけを、この順番で表示してください。\n\nSELECT のあとに列名をカンマで区切って書くと、必要な列だけを取り出せます。",
+  "constraints": [
+    {
+      "name": "出力列",
+      "value": "title, author の2列をこの順番で出力します"
+    }
+  ],
+  "csv": "[books]\nid,title,author,price\n1,SQL入門,佐藤,1200\n2,データの見方,田中,1500\n3,表のきほん,鈴木,900",
+  "starterSql": "SELECT\n  -- ここに列名を書きます\nFROM books;",
+  "solutionSql": "SELECT\n  title,\n  author\nFROM books;",
+  "expectedCsv": "title,author\nSQL入門,佐藤\nデータの見方,田中\n表のきほん,鈴木\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[books]\nid,title,author,price\n1,SQL入門,佐藤,1200\n2,データの見方,田中,1500\n3,表のきほん,鈴木,900",
+      "expectedCsv": "title,author\nSQL入門,佐藤\nデータの見方,田中\n表のきほん,鈴木\n"
+    },
+    {
+      "name": "行が少ない場合",
+      "csv": "[books]\nid,title,author,price\n9,集計の一歩,伊藤,1300",
+      "expectedCsv": "title,author\n集計の一歩,伊藤\n"
+    }
+  ]
+}

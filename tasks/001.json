@@ -1,41 +1,32 @@
 {
   "number": 1,
-  "slug": "team-score-summary",
-  "title": "チーム別スコア集計",
-  "statement": "players テーブルから、チームごとの人数と平均スコアを求めてください。平均スコアが高い順、同点の場合は team の昇順で並べます。",
+  "slug": "select-all-books",
+  "title": "[確認しよう] SELECTで表を表示する",
+  "statement": "books テーブルのすべての列を表示してください。\n\nSELECT は「どの列を見るか」を指定する命令です。今回は SELECT * と書きます。* は「すべての列」という意味です。\nFROM は「どのテーブルから取り出すか」を指定します。つまり SELECT * FROM books; は「books テーブルから、すべての列を取り出す」という意味になります。\n\nこの問題は確認用です。用意されているSQLをそのまま実行して、結果の形を見てみましょう。",
   "constraints": [
     {
-      "name": "行数",
-      "value": "1 <= players の行数 <= 200"
+      "name": "テーブル",
+      "value": "books テーブルには id, title, author の列があります"
     },
     {
-      "name": "スコア",
-      "value": "0 <= score <= 100"
-    },
-    {
-      "name": "チーム名",
-      "value": "team は英小文字のみ"
+      "name": "目的",
+      "value": "SELECT と FROM の役割を確認します"
     }
   ],
-  "csv": "[players]\nname,team,score\nAlice,red,82\nBob,blue,91\nChika,red,88\nDaichi,blue,76",
-  "starterSql": "SELECT\n  team,\n  COUNT(*) AS members,\n  AVG(CAST(score AS INTEGER)) AS average_score\nFROM players\nGROUP BY team\nORDER BY average_score DESC, team ASC;",
-  "solutionSql": "SELECT\n  team,\n  COUNT(*) AS members,\n  AVG(CAST(score AS INTEGER)) AS average_score\nFROM players\nGROUP BY team\nORDER BY average_score DESC, team ASC;",
-  "expectedCsv": "team,members,average_score\nred,2,85.0\nblue,2,83.5\n",
+  "csv": "[books]\nid,title,author\n1,SQL入門,佐藤\n2,データの見方,田中\n3,表のきほん,鈴木",
+  "starterSql": "SELECT *\nFROM books;",
+  "solutionSql": "SELECT *\nFROM books;",
+  "expectedCsv": "id,title,author\n1,SQL入門,佐藤\n2,データの見方,田中\n3,表のきほん,鈴木\n",
   "tests": [
     {
       "name": "サンプル",
-      "csv": "[players]\nname,team,score\nAlice,red,82\nBob,blue,91\nChika,red,88\nDaichi,blue,76",
-      "expectedCsv": "team,members,average_score\nred,2,85.0\nblue,2,83.5\n"
+      "csv": "[books]\nid,title,author\n1,SQL入門,佐藤\n2,データの見方,田中\n3,表のきほん,鈴木",
+      "expectedCsv": "id,title,author\n1,SQL入門,佐藤\n2,データの見方,田中\n3,表のきほん,鈴木\n"
     },
     {
-      "name": "1チームのみ",
-      "csv": "[players]\nname,team,score\nAoi,green,100\nRen,green,70\nMio,green,85",
-      "expectedCsv": "team,members,average_score\ngreen,3,85.0\n"
-    },
-    {
-      "name": "平均点が同じ",
-      "csv": "[players]\nname,team,score\nA,red,90\nB,red,70\nC,blue,80\nD,yellow,95",
-      "expectedCsv": "team,members,average_score\nyellow,1,95.0\nblue,1,80.0\nred,2,80.0\n"
+      "name": "別の本",
+      "csv": "[books]\nid,title,author\n10,はじめてのDB,山田\n11,クエリ練習,中村",
+      "expectedCsv": "id,title,author\n10,はじめてのDB,山田\n11,クエリ練習,中村\n"
     }
   ]
 }

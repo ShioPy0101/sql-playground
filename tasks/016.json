@@ -1,0 +1,32 @@
+{
+  "number": 16,
+  "slug": "join-sales-by-category",
+  "title": "[書いてみよう] カテゴリ別の売上を求める",
+  "statement": "products と order_items をつないで、category ごとの売上合計を求めてください。売上は price × quantity です。category と sales_amount を表示し、category の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "結合条件",
+      "value": "order_items.product_id = products.id で結合します"
+    },
+    {
+      "name": "売上",
+      "value": "price と quantity を数値に変換して掛け算します"
+    }
+  ],
+  "csv": "[products]\nid,name,category,price\n1,ノート,stationery,300\n2,ペン,stationery,100\n3,水,drink,120\n\n[order_items]\nid,product_id,quantity\n1,1,2\n2,2,5\n3,3,3",
+  "starterSql": "SELECT\n  products.category,\n  -- price * quantity の合計を sales_amount として出します\nFROM products\nINNER JOIN order_items\n  ON order_items.product_id = products.id\nGROUP BY products.category\nORDER BY products.category ASC;",
+  "solutionSql": "SELECT\n  products.category,\n  SUM(CAST(products.price AS INTEGER) * CAST(order_items.quantity AS INTEGER)) AS sales_amount\nFROM products\nINNER JOIN order_items\n  ON order_items.product_id = products.id\nGROUP BY products.category\nORDER BY products.category ASC;",
+  "expectedCsv": "category,sales_amount\ndrink,360\nstationery,1100\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name,category,price\n1,ノート,stationery,300\n2,ペン,stationery,100\n3,水,drink,120\n\n[order_items]\nid,product_id,quantity\n1,1,2\n2,2,5\n3,3,3",
+      "expectedCsv": "category,sales_amount\ndrink,360\nstationery,1100\n"
+    },
+    {
+      "name": "複数カテゴリ",
+      "csv": "[products]\nid,name,category,price\n1,A,food,200\n2,B,food,150\n3,C,book,500\n\n[order_items]\nid,product_id,quantity\n1,1,1\n2,2,2\n3,3,4",
+      "expectedCsv": "category,sales_amount\nbook,2000\nfood,500\n"
+    }
+  ]
+}

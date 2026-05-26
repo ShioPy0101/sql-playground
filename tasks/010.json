@@ -1,0 +1,32 @@
+{
+  "number": 10,
+  "slug": "group-by-category-sum",
+  "title": "[書いてみよう] グループごとに合計する",
+  "statement": "sales テーブルから category ごとの quantity の合計を求め、category と total_quantity を表示してください。category の昇順で並べます。\n\nGROUP BY と SUM を組み合わせると、グループごとの合計を求められます。",
+  "constraints": [
+    {
+      "name": "グループ",
+      "value": "category ごとに集計します"
+    },
+    {
+      "name": "並び順",
+      "value": "category の昇順です"
+    }
+  ],
+  "csv": "[sales]\nid,category,quantity\n1,drink,3\n2,food,2\n3,drink,4\n4,book,1",
+  "starterSql": "SELECT\n  category,\n  -- quantity の合計を total_quantity として出します\nFROM sales\nGROUP BY category\nORDER BY category ASC;",
+  "solutionSql": "SELECT\n  category,\n  SUM(CAST(quantity AS INTEGER)) AS total_quantity\nFROM sales\nGROUP BY category\nORDER BY category ASC;",
+  "expectedCsv": "category,total_quantity\nbook,1\ndrink,7\nfood,2\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[sales]\nid,category,quantity\n1,drink,3\n2,food,2\n3,drink,4\n4,book,1",
+      "expectedCsv": "category,total_quantity\nbook,1\ndrink,7\nfood,2\n"
+    },
+    {
+      "name": "2カテゴリ",
+      "csv": "[sales]\nid,category,quantity\n1,a,10\n2,b,5\n3,a,2",
+      "expectedCsv": "category,total_quantity\na,12\nb,5\n"
+    }
+  ]
+}

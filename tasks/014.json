@@ -1,0 +1,32 @@
+{
+  "number": 14,
+  "slug": "join-products-orders",
+  "title": "[書いてみよう] 商品名をJOINで表示する",
+  "statement": "order_items テーブルと products テーブルをつないで、注文明細ID、商品名、数量を表示してください。注文明細IDの昇順で並べます。\n\norder_items.product_id と products.id が対応しています。",
+  "constraints": [
+    {
+      "name": "結合条件",
+      "value": "order_items.product_id = products.id で結合します"
+    },
+    {
+      "name": "出力列",
+      "value": "item_id, product_name, quantity の順番で出力します"
+    }
+  ],
+  "csv": "[products]\nid,name\n1,ノート\n2,ペン\n3,消しゴム\n\n[order_items]\nid,product_id,quantity\n1001,1,2\n1002,2,5\n1003,1,1",
+  "starterSql": "SELECT\n  order_items.id AS item_id,\n  -- 商品名を product_name として出します\n  order_items.quantity\nFROM order_items\nINNER JOIN products\n  ON -- 結合条件を書きます\nORDER BY CAST(order_items.id AS INTEGER) ASC;",
+  "solutionSql": "SELECT\n  order_items.id AS item_id,\n  products.name AS product_name,\n  order_items.quantity\nFROM order_items\nINNER JOIN products\n  ON order_items.product_id = products.id\nORDER BY CAST(order_items.id AS INTEGER) ASC;",
+  "expectedCsv": "item_id,product_name,quantity\n1001,ノート,2\n1002,ペン,5\n1003,ノート,1\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name\n1,ノート\n2,ペン\n3,消しゴム\n\n[order_items]\nid,product_id,quantity\n1001,1,2\n1002,2,5\n1003,1,1",
+      "expectedCsv": "item_id,product_name,quantity\n1001,ノート,2\n1002,ペン,5\n1003,ノート,1\n"
+    },
+    {
+      "name": "別データ",
+      "csv": "[products]\nid,name\n10,水\n11,お茶\n\n[order_items]\nid,product_id,quantity\n1,11,3\n2,10,4",
+      "expectedCsv": "item_id,product_name,quantity\n1,お茶,3\n2,水,4\n"
+    }
+  ]
+}

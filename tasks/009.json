@@ -1,0 +1,32 @@
+{
+  "number": 9,
+  "slug": "group-by-customer-confirm",
+  "title": "[確認しよう] GROUP BYでグループごとに数える",
+  "statement": "orders テーブルから customer ごとの注文数を求め、customer と order_count を表示してください。\n\nGROUP BY は「同じ値ごとに行をまとめる」ための書き方です。GROUP BY customer と書くと、customer が同じ行を1つのグループとして扱います。\nそのうえで COUNT(*) を使うと、グループごとの行数を数えられます。\n\nこの問題は確認用です。customer ごとに結果が1行ずつ出ることを見てみましょう。",
+  "constraints": [
+    {
+      "name": "グループ",
+      "value": "customer ごとに集計します"
+    },
+    {
+      "name": "並び順",
+      "value": "customer の昇順です"
+    }
+  ],
+  "csv": "[orders]\nid,customer,total\n1,Aoi,1200\n2,Ren,800\n3,Aoi,500\n4,Mio,700",
+  "starterSql": "SELECT\n  customer,\n  COUNT(*) AS order_count\nFROM orders\nGROUP BY customer\nORDER BY customer ASC;",
+  "solutionSql": "SELECT\n  customer,\n  COUNT(*) AS order_count\nFROM orders\nGROUP BY customer\nORDER BY customer ASC;",
+  "expectedCsv": "customer,order_count\nAoi,2\nMio,1\nRen,1\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[orders]\nid,customer,total\n1,Aoi,1200\n2,Ren,800\n3,Aoi,500\n4,Mio,700",
+      "expectedCsv": "customer,order_count\nAoi,2\nMio,1\nRen,1\n"
+    },
+    {
+      "name": "同じ人が多い",
+      "csv": "[orders]\nid,customer,total\n1,Yui,100\n2,Yui,200\n3,Yui,300\n4,Kai,400",
+      "expectedCsv": "customer,order_count\nKai,1\nYui,3\n"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "number": 20,
+  "slug": "left-join-sales-report",
+  "title": "[書いてみよう] 外部結合で一覧レポートを作る",
+  "statement": "products と order_items を LEFT JOIN して、すべての商品について product_name と sold_quantity を表示してください。売れていない商品の sold_quantity は 0 とします。product_name の昇順で並べます。\n\nLEFT JOIN を使うと、まだ売れていない商品も一覧に残せます。SUM の結果が空になる場合は COALESCE(値, 0) を使うと 0 に置き換えられます。",
+  "constraints": [
+    {
+      "name": "結合の種類",
+      "value": "products を左側にした LEFT JOIN を使います"
+    },
+    {
+      "name": "0件の扱い",
+      "value": "売れていない商品は sold_quantity を 0 にします"
+    }
+  ],
+  "csv": "[products]\nid,name\n1,ノート\n2,ペン\n3,消しゴム\n4,定規\n\n[order_items]\nid,product_id,quantity\n101,1,2\n102,2,5\n103,1,1",
+  "starterSql": "SELECT\n  products.name AS product_name,\n  -- 売れた数量の合計を sold_quantity として出します。売れていない商品は0にします。\nFROM products\nLEFT JOIN order_items\n  ON order_items.product_id = products.id\nGROUP BY products.id, products.name\nORDER BY products.name ASC;",
+  "solutionSql": "SELECT\n  products.name AS product_name,\n  COALESCE(SUM(CAST(order_items.quantity AS INTEGER)), 0) AS sold_quantity\nFROM products\nLEFT JOIN order_items\n  ON order_items.product_id = products.id\nGROUP BY products.id, products.name\nORDER BY products.name ASC;",
+  "expectedCsv": "product_name,sold_quantity\nノート,3\nペン,5\n定規,0\n消しゴム,0\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name\n1,ノート\n2,ペン\n3,消しゴム\n4,定規\n\n[order_items]\nid,product_id,quantity\n101,1,2\n102,2,5\n103,1,1",
+      "expectedCsv": "product_name,sold_quantity\nノート,3\nペン,5\n定規,0\n消しゴム,0\n"
+    },
+    {
+      "name": "全部売れていない商品を含む",
+      "csv": "[products]\nid,name\n1,A\n2,B\n3,C\n\n[order_items]\nid,product_id,quantity\n1,2,4",
+      "expectedCsv": "product_name,sold_quantity\nA,0\nB,4\nC,0\n"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "number": 6,
+  "slug": "top-three-products",
+  "title": "[書いてみよう] 上位3件を取り出す",
+  "statement": "products テーブルから、price が高い順に上位3件の name と price を表示してください。\n\n並べ替えには ORDER BY、件数を制限するには LIMIT を使います。",
+  "constraints": [
+    {
+      "name": "出力件数",
+      "value": "最大3件を出力します"
+    },
+    {
+      "name": "並び順",
+      "value": "price の数値が高い順、同じ場合は name の昇順です"
+    }
+  ],
+  "csv": "[products]\nid,name,price\n1,ノート,300\n2,マウス,1200\n3,キーボード,2500\n4,モニター,18000\n5,ペン,100",
+  "starterSql": "SELECT\n  name,\n  price\nFROM products\nORDER BY -- ここに並び順を書きます\nLIMIT -- 件数を書きます;",
+  "solutionSql": "SELECT\n  name,\n  price\nFROM products\nORDER BY CAST(price AS INTEGER) DESC, name ASC\nLIMIT 3;",
+  "expectedCsv": "name,price\nモニター,18000\nキーボード,2500\nマウス,1200\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name,price\n1,ノート,300\n2,マウス,1200\n3,キーボード,2500\n4,モニター,18000\n5,ペン,100",
+      "expectedCsv": "name,price\nモニター,18000\nキーボード,2500\nマウス,1200\n"
+    },
+    {
+      "name": "同じ価格あり",
+      "csv": "[products]\nid,name,price\n1,B商品,500\n2,A商品,500\n3,C商品,800\n4,D商品,100",
+      "expectedCsv": "name,price\nC商品,800\nA商品,500\nB商品,500\n"
+    }
+  ]
+}

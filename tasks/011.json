@@ -1,0 +1,28 @@
+{
+  "number": 11,
+  "slug": "where-and-confirm",
+  "title": "[確認しよう] 条件を組み合わせる",
+  "statement": "employees テーブルから department が sales で、salary が 3000 以上の人について、name と salary を表示してください。\n\nWHERE では AND を使って条件を組み合わせられます。A AND B は「AもBも成り立つ行」という意味です。\n今回の WHERE department = 'sales' AND CAST(salary AS INTEGER) >= 3000 は「sales 部門で、salary が3000以上」の行だけを残します。\n\nこの問題は確認用です。2つの条件を同時に満たす行だけが出ることを確認しましょう。",
+  "constraints": [
+    {
+      "name": "条件",
+      "value": "department が sales かつ salary が 3000 以上です"
+    }
+  ],
+  "csv": "[employees]\nid,name,department,salary\n1,Aoi,sales,2800\n2,Ren,sales,3500\n3,Mio,dev,4200\n4,Sora,sales,3000",
+  "starterSql": "SELECT\n  name,\n  salary\nFROM employees\nWHERE department = 'sales'\n  AND CAST(salary AS INTEGER) >= 3000\nORDER BY name ASC;",
+  "solutionSql": "SELECT\n  name,\n  salary\nFROM employees\nWHERE department = 'sales'\n  AND CAST(salary AS INTEGER) >= 3000\nORDER BY name ASC;",
+  "expectedCsv": "name,salary\nRen,3500\nSora,3000\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[employees]\nid,name,department,salary\n1,Aoi,sales,2800\n2,Ren,sales,3500\n3,Mio,dev,4200\n4,Sora,sales,3000",
+      "expectedCsv": "name,salary\nRen,3500\nSora,3000\n"
+    },
+    {
+      "name": "境界値",
+      "csv": "[employees]\nid,name,department,salary\n1,Yui,sales,3000\n2,Kai,sales,2999\n3,Haru,dev,5000",
+      "expectedCsv": "name,salary\nYui,3000\n"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -326,6 +327,25 @@ func TestTaskServiceAppliesUserProgress(t *testing.T) {
 	}
 	if task.SavedQuery != correctQuery {
 		t.Fatalf("saved query = %q, want latest query %q", task.SavedQuery, correctQuery)
+	}
+}
+
+func TestTaskServiceNewAdvancedTaskSolutionsPass(t *testing.T) {
+	service := newTestTaskService(t)
+
+	for number := 22; number <= 31; number++ {
+		task, err := service.LoadTask(fmt.Sprintf("%03d", number))
+		if err != nil {
+			t.Fatalf("LoadTask(%03d) returned error: %v", number, err)
+		}
+
+		result, err := service.Submit(fmt.Sprintf("%03d", number), task.SolutionSQL)
+		if err != nil {
+			t.Fatalf("Submit(%03d) returned error: %v", number, err)
+		}
+		if !result.Passed {
+			t.Fatalf("solution for task %03d did not pass: %#v", number, result)
+		}
 	}
 }
 

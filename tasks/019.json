@@ -1,0 +1,32 @@
+{
+  "number": 19,
+  "slug": "left-join-missing-confirm",
+  "title": "[確認しよう] LEFT JOINで未登録を見つける",
+  "statement": "customers のうち、まだ注文がない顧客の name を表示してください。\n\nLEFT JOIN では、左側の customers はすべて残ります。注文がない顧客は、結合先の orders.id が空になります。\nWHERE orders.id IS NULL と書くと、「結合できる注文がなかった顧客」だけを取り出せます。\n\nこの問題は確認用です。LEFT JOIN は、存在しない対応先を探すときにもよく使われます。",
+  "constraints": [
+    {
+      "name": "目的",
+      "value": "注文がない顧客だけを探します"
+    },
+    {
+      "name": "条件",
+      "value": "orders.id IS NULL を使います"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,3,500",
+  "starterSql": "SELECT\n  customers.name\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nWHERE orders.id IS NULL\nORDER BY customers.name ASC;",
+  "solutionSql": "SELECT\n  customers.name\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nWHERE orders.id IS NULL\nORDER BY customers.name ASC;",
+  "expectedCsv": "name\nRen\nSora\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,3,500",
+      "expectedCsv": "name\nRen\nSora\n"
+    },
+    {
+      "name": "1人だけ未注文",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n3,Haru\n\n[orders]\nid,customer_id,total\n1,1,100\n2,2,200",
+      "expectedCsv": "name\nHaru\n"
+    }
+  ]
+}

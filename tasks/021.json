@@ -1,0 +1,41 @@
+{
+  "number": 21,
+  "slug": "top-selling-products-by-category",
+  "title": "[挑戦しよう] カテゴリごとの売上トップを出す",
+  "statement": "products と order_items から、カテゴリごとに売上数量が最も多い商品を表示してください。出力する列は category, product_name, sold_quantity です。\n\n同じカテゴリ内で売上数量が同じトップの商品が複数ある場合は、すべて表示します。売上がない商品は対象外です。category の昇順、同じ category の中では product_name の昇順で並べます。\n\n一度商品ごとの sold_quantity を集計し、その結果からカテゴリごとの最大値を探すと考えやすくなります。CTE やサブクエリを使って段階的に書いてみましょう。",
+  "constraints": [
+    {
+      "name": "集計",
+      "value": "商品ごとの売上数量を SUM で集計します"
+    },
+    {
+      "name": "トップの判定",
+      "value": "カテゴリごとの最大 sold_quantity と一致する商品だけを残します"
+    },
+    {
+      "name": "同率1位",
+      "value": "同率トップの商品が複数ある場合はすべて表示します"
+    }
+  ],
+  "csv": "[products]\nid,name,category\n1,notebook,stationery\n2,pen,stationery\n3,eraser,stationery\n4,mug,home\n5,towel,home\n6,coffee,food\n\n[order_items]\nid,product_id,quantity\n101,1,3\n102,2,5\n103,1,2\n104,4,4\n105,5,1\n106,4,2\n107,6,3",
+  "starterSql": "WITH product_sales AS (\n  SELECT\n    products.category,\n    products.name AS product_name,\n    SUM(CAST(order_items.quantity AS INTEGER)) AS sold_quantity\n  FROM products\n  JOIN order_items\n    ON order_items.product_id = products.id\n  GROUP BY products.id, products.name, products.category\n), category_max AS (\n  SELECT\n    category,\n    -- カテゴリごとの最大 sold_quantity を max_quantity として出します\n  FROM product_sales\n  GROUP BY category\n)\nSELECT\n  product_sales.category,\n  product_sales.product_name,\n  product_sales.sold_quantity\nFROM product_sales\nJOIN category_max\n  ON category_max.category = product_sales.category\n -- 最大値と一致する行だけにします\nORDER BY product_sales.category ASC, product_sales.product_name ASC;",
+  "solutionSql": "WITH product_sales AS (\n  SELECT\n    products.category,\n    products.name AS product_name,\n    SUM(CAST(order_items.quantity AS INTEGER)) AS sold_quantity\n  FROM products\n  JOIN order_items\n    ON order_items.product_id = products.id\n  GROUP BY products.id, products.name, products.category\n), category_max AS (\n  SELECT\n    category,\n    MAX(sold_quantity) AS max_quantity\n  FROM product_sales\n  GROUP BY category\n)\nSELECT\n  product_sales.category,\n  product_sales.product_name,\n  product_sales.sold_quantity\nFROM product_sales\nJOIN category_max\n  ON category_max.category = product_sales.category\n AND category_max.max_quantity = product_sales.sold_quantity\nORDER BY product_sales.category ASC, product_sales.product_name ASC;",
+  "expectedCsv": "category,product_name,sold_quantity\nfood,coffee,3\nhome,mug,6\nstationery,notebook,5\nstationery,pen,5\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name,category\n1,notebook,stationery\n2,pen,stationery\n3,eraser,stationery\n4,mug,home\n5,towel,home\n6,coffee,food\n\n[order_items]\nid,product_id,quantity\n101,1,3\n102,2,5\n103,1,2\n104,4,4\n105,5,1\n106,4,2\n107,6,3",
+      "expectedCsv": "category,product_name,sold_quantity\nfood,coffee,3\nhome,mug,6\nstationery,notebook,5\nstationery,pen,5\n"
+    },
+    {
+      "name": "売上なしの商品と同率トップを含む",
+      "csv": "[products]\nid,name,category\n1,apple,food\n2,bread,food\n3,cup,home\n4,plate,home\n5,spoon,home\n6,pencil,stationery\n\n[order_items]\nid,product_id,quantity\n1,1,2\n2,2,2\n3,3,1\n4,4,3\n5,3,2\n6,6,4",
+      "expectedCsv": "category,product_name,sold_quantity\nfood,apple,2\nfood,bread,2\nhome,cup,3\nhome,plate,3\nstationery,pencil,4\n"
+    },
+    {
+      "name": "複数明細の合計でトップが決まる",
+      "csv": "[products]\nid,name,category\n1,A,alpha\n2,B,alpha\n3,C,beta\n4,D,beta\n\n[order_items]\nid,product_id,quantity\n1,1,1\n2,1,4\n3,2,3\n4,3,2\n5,4,1\n6,4,1",
+      "expectedCsv": "category,product_name,sold_quantity\nalpha,A,5\nbeta,C,2\nbeta,D,2\n"
+    }
+  ]
+}

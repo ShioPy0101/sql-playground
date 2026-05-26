@@ -1,0 +1,28 @@
+{
+  "number": 3,
+  "slug": "where-category-confirm",
+  "title": "[確認しよう] WHEREで行をしぼる",
+  "statement": "items テーブルから category が fruit の行だけを表示してください。\n\nWHERE は「どの行を取り出すか」という条件を書く場所です。SELECT が列を選ぶのに対して、WHERE は行を選びます。\ncategory = 'fruit' は「category 列の値が fruit と等しい行」という意味です。文字列は 'fruit' のようにシングルクォートで囲みます。\n\nこの問題は確認用です。用意されているSQLを実行して、条件に合う行だけが残ることを確認しましょう。",
+  "constraints": [
+    {
+      "name": "条件",
+      "value": "category が fruit の行だけを出力します"
+    }
+  ],
+  "csv": "[items]\nid,name,category\n1,りんご,fruit\n2,にんじん,vegetable\n3,みかん,fruit\n4,じゃがいも,vegetable",
+  "starterSql": "SELECT\n  id,\n  name,\n  category\nFROM items\nWHERE category = 'fruit';",
+  "solutionSql": "SELECT\n  id,\n  name,\n  category\nFROM items\nWHERE category = 'fruit';",
+  "expectedCsv": "id,name,category\n1,りんご,fruit\n3,みかん,fruit\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[items]\nid,name,category\n1,りんご,fruit\n2,にんじん,vegetable\n3,みかん,fruit\n4,じゃがいも,vegetable",
+      "expectedCsv": "id,name,category\n1,りんご,fruit\n3,みかん,fruit\n"
+    },
+    {
+      "name": "fruit が1件",
+      "csv": "[items]\nid,name,category\n1,トマト,vegetable\n2,バナナ,fruit\n3,レタス,vegetable",
+      "expectedCsv": "id,name,category\n2,バナナ,fruit\n"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "number": 13,
+  "slug": "inner-join-confirm",
+  "title": "[確認しよう] INNER JOINで表をつなぐ",
+  "statement": "orders テーブルと customers テーブルをつないで、注文ID、顧客名、注文金額を表示してください。\n\nJOIN は複数のテーブルをつなぐ書き方です。INNER JOIN は、つなぐ相手が両方のテーブルに存在する行だけを出します。\nON orders.customer_id = customers.id は「orders の customer_id と customers の id が同じ行を対応させる」という条件です。\n\nこの問題は確認用です。注文に入っている customer_id が、customers のどの人を指しているかを見てみましょう。",
+  "constraints": [
+    {
+      "name": "結合条件",
+      "value": "orders.customer_id = customers.id で結合します"
+    },
+    {
+      "name": "結合の種類",
+      "value": "INNER JOIN を使います"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,2,800\n103,1,500",
+  "starterSql": "SELECT\n  orders.id AS order_id,\n  customers.name AS customer_name,\n  orders.total\nFROM orders\nINNER JOIN customers\n  ON orders.customer_id = customers.id\nORDER BY CAST(orders.id AS INTEGER) ASC;",
+  "solutionSql": "SELECT\n  orders.id AS order_id,\n  customers.name AS customer_name,\n  orders.total\nFROM orders\nINNER JOIN customers\n  ON orders.customer_id = customers.id\nORDER BY CAST(orders.id AS INTEGER) ASC;",
+  "expectedCsv": "order_id,customer_name,total\n101,Aoi,1200\n102,Ren,800\n103,Aoi,500\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,2,800\n103,1,500",
+      "expectedCsv": "order_id,customer_name,total\n101,Aoi,1200\n102,Ren,800\n103,Aoi,500\n"
+    },
+    {
+      "name": "未注文の顧客あり",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id,total\n201,2,300\n202,2,400",
+      "expectedCsv": "order_id,customer_name,total\n201,Kai,300\n202,Kai,400\n"
+    }
+  ]
+}

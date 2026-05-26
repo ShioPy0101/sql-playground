@@ -1,0 +1,32 @@
+{
+  "number": 28,
+  "slug": "overlapping-room-reservations",
+  "title": "[挑戦しよう] 重複している予約を見つける",
+  "statement": "reservations から、同じ部屋で時間帯が重複している予約の組み合わせを表示してください。出力する列は room, first_guest, second_guest です。\n\n2つの予約 A, B は、A.start_at < B.end_at かつ B.start_at < A.end_at のとき重複しているとします。終了時刻と開始時刻がちょうど同じ場合は重複ではありません。同じ組み合わせを重複して出さないように、id が小さい予約を first 側にしてください。room の昇順、first_guest の昇順、second_guest の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "自己結合",
+      "value": "reservations を2回参照して同じ部屋の別予約を比較します"
+    },
+    {
+      "name": "重複判定",
+      "value": "start_at < other.end_at かつ other.start_at < end_at を使います"
+    }
+  ],
+  "csv": "[reservations]\nid,room,guest,start_at,end_at\n1,A,Aoi,2026-05-01 09:00,2026-05-01 10:00\n2,A,Ren,2026-05-01 09:30,2026-05-01 11:00\n3,A,Mio,2026-05-01 11:00,2026-05-01 12:00\n4,B,Sora,2026-05-01 13:00,2026-05-01 14:00\n5,B,Yui,2026-05-01 13:30,2026-05-01 13:45\n6,B,Kai,2026-05-01 14:00,2026-05-01 15:00",
+  "starterSql": "SELECT\n  first.room,\n  first.guest AS first_guest,\n  second.guest AS second_guest\nFROM reservations AS first\nJOIN reservations AS second\n  ON first.room = second.room\n -- 同じ組み合わせを1回だけ比較し、時間帯の重複を判定します\nORDER BY first.room ASC, first.guest ASC, second.guest ASC;",
+  "solutionSql": "SELECT\n  first.room,\n  first.guest AS first_guest,\n  second.guest AS second_guest\nFROM reservations AS first\nJOIN reservations AS second\n  ON first.room = second.room\n AND CAST(first.id AS INTEGER) < CAST(second.id AS INTEGER)\n AND first.start_at < second.end_at\n AND second.start_at < first.end_at\nORDER BY first.room ASC, first.guest ASC, second.guest ASC;",
+  "expectedCsv": "room,first_guest,second_guest\nA,Aoi,Ren\nB,Sora,Yui\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[reservations]\nid,room,guest,start_at,end_at\n1,A,Aoi,2026-05-01 09:00,2026-05-01 10:00\n2,A,Ren,2026-05-01 09:30,2026-05-01 11:00\n3,A,Mio,2026-05-01 11:00,2026-05-01 12:00\n4,B,Sora,2026-05-01 13:00,2026-05-01 14:00\n5,B,Yui,2026-05-01 13:30,2026-05-01 13:45\n6,B,Kai,2026-05-01 14:00,2026-05-01 15:00",
+      "expectedCsv": "room,first_guest,second_guest\nA,Aoi,Ren\nB,Sora,Yui\n"
+    },
+    {
+      "name": "3件が重なる",
+      "csv": "[reservations]\nid,room,guest,start_at,end_at\n1,X,A,2026-01-01 10:00,2026-01-01 12:00\n2,X,B,2026-01-01 11:00,2026-01-01 13:00\n3,X,C,2026-01-01 11:30,2026-01-01 11:45\n4,X,D,2026-01-01 13:00,2026-01-01 14:00",
+      "expectedCsv": "room,first_guest,second_guest\nX,A,B\nX,A,C\nX,B,C\n"
+    }
+  ]
+}

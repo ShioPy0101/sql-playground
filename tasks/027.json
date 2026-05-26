@@ -1,0 +1,32 @@
+{
+  "number": 27,
+  "slug": "products-above-category-average-sales",
+  "title": "[挑戦しよう] カテゴリ平均より売れている商品",
+  "statement": "products と order_items から、同じカテゴリの商品平均より売上数量が多い商品を表示してください。出力する列は category, product_name, sold_quantity, category_average です。\n\n売上がない商品も平均計算には sold_quantity = 0 として含めます。category_average は ROUND(平均, 1) で小数1桁にします。category の昇順、product_name の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "0件の扱い",
+      "value": "売上がない商品も sold_quantity 0 として平均に含めます"
+    },
+    {
+      "name": "平均との比較",
+      "value": "商品ごとの売上数量がカテゴリ平均より大きい商品だけを残します"
+    }
+  ],
+  "csv": "[products]\nid,name,category\n1,notebook,stationery\n2,pen,stationery\n3,eraser,stationery\n4,mug,home\n5,towel,home\n6,soap,home\n\n[order_items]\nid,product_id,quantity\n1,1,5\n2,2,2\n3,4,3\n4,5,3\n5,5,1",
+  "starterSql": "WITH product_sales AS (\n  SELECT\n    products.id,\n    products.category,\n    products.name AS product_name\n    -- 商品ごとの sold_quantity を出します\n  FROM products\n  LEFT JOIN order_items\n    ON order_items.product_id = products.id\n  GROUP BY products.id, products.category, products.name\n), category_average AS (\n  SELECT\n    category\n    -- カテゴリ平均を出します\n  FROM product_sales\n  GROUP BY category\n)\nSELECT\n  product_sales.category,\n  product_sales.product_name,\n  product_sales.sold_quantity,\n  ROUND(category_average.avg_quantity, 1) AS category_average\nFROM product_sales\nJOIN category_average\n  ON category_average.category = product_sales.category\nWHERE product_sales.sold_quantity > category_average.avg_quantity\nORDER BY product_sales.category ASC, product_sales.product_name ASC;",
+  "solutionSql": "WITH product_sales AS (\n  SELECT\n    products.id,\n    products.category,\n    products.name AS product_name,\n    COALESCE(SUM(CAST(order_items.quantity AS INTEGER)), 0) AS sold_quantity\n  FROM products\n  LEFT JOIN order_items\n    ON order_items.product_id = products.id\n  GROUP BY products.id, products.category, products.name\n), category_average AS (\n  SELECT\n    category,\n    AVG(sold_quantity) AS avg_quantity\n  FROM product_sales\n  GROUP BY category\n)\nSELECT\n  product_sales.category,\n  product_sales.product_name,\n  product_sales.sold_quantity,\n  ROUND(category_average.avg_quantity, 1) AS category_average\nFROM product_sales\nJOIN category_average\n  ON category_average.category = product_sales.category\nWHERE product_sales.sold_quantity > category_average.avg_quantity\nORDER BY product_sales.category ASC, product_sales.product_name ASC;",
+  "expectedCsv": "category,product_name,sold_quantity,category_average\nhome,mug,3,2.3\nhome,towel,4,2.3\nstationery,notebook,5,2.3\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name,category\n1,notebook,stationery\n2,pen,stationery\n3,eraser,stationery\n4,mug,home\n5,towel,home\n6,soap,home\n\n[order_items]\nid,product_id,quantity\n1,1,5\n2,2,2\n3,4,3\n4,5,3\n5,5,1",
+      "expectedCsv": "category,product_name,sold_quantity,category_average\nhome,mug,3,2.3\nhome,towel,4,2.3\nstationery,notebook,5,2.3\n"
+    },
+    {
+      "name": "売上なしも平均に含める",
+      "csv": "[products]\nid,name,category\n1,A,alpha\n2,B,alpha\n3,C,alpha\n4,D,beta\n5,E,beta\n\n[order_items]\nid,product_id,quantity\n1,1,6\n2,2,3\n3,4,1",
+      "expectedCsv": "category,product_name,sold_quantity,category_average\nalpha,A,6,3.0\nbeta,D,1,0.5\n"
+    }
+  ]
+}

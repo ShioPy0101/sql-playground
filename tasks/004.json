@@ -1,0 +1,32 @@
+{
+  "number": 4,
+  "slug": "where-price-write",
+  "title": "[書いてみよう] 数値の条件でしぼる",
+  "statement": "products テーブルから price が 1000 以上の商品について、name と price を表示してください。\n\nCSVから読み込んだ値は文字として入ることがあるため、数値として比べるときは CAST(price AS INTEGER) を使います。",
+  "constraints": [
+    {
+      "name": "条件",
+      "value": "price を数値として見て 1000 以上の行を出力します"
+    },
+    {
+      "name": "出力列",
+      "value": "name, price の順番で出力します"
+    }
+  ],
+  "csv": "[products]\nid,name,price\n1,ノート,300\n2,マウス,1200\n3,キーボード,2500\n4,ペン,100",
+  "starterSql": "SELECT\n  name,\n  price\nFROM products\nWHERE -- ここに条件を書きます;",
+  "solutionSql": "SELECT\n  name,\n  price\nFROM products\nWHERE CAST(price AS INTEGER) >= 1000;",
+  "expectedCsv": "name,price\nマウス,1200\nキーボード,2500\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name,price\n1,ノート,300\n2,マウス,1200\n3,キーボード,2500\n4,ペン,100",
+      "expectedCsv": "name,price\nマウス,1200\nキーボード,2500\n"
+    },
+    {
+      "name": "1000ちょうどを含む",
+      "csv": "[products]\nid,name,price\n1,ケーブル,1000\n2,消しゴム,80\n3,モニター,18000",
+      "expectedCsv": "name,price\nケーブル,1000\nモニター,18000\n"
+    }
+  ]
+}

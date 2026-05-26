@@ -1,0 +1,32 @@
+{
+  "number": 18,
+  "slug": "left-join-count-employees",
+  "title": "[書いてみよう] 0件も含めて数える",
+  "statement": "departments と employees を LEFT JOIN して、すべての部署について department_name と employee_count を表示してください。部署名の昇順で並べます。\n\n社員がいない部署も 0 として表示する必要があります。LEFT JOIN と COUNT(employees.id) を使うと、対応する社員がいない部署も残せます。",
+  "constraints": [
+    {
+      "name": "結合の種類",
+      "value": "departments を左側にした LEFT JOIN を使います"
+    },
+    {
+      "name": "集計",
+      "value": "部署ごとの社員数を数えます"
+    }
+  ],
+  "csv": "[departments]\nid,name\n1,sales\n2,dev\n3,hr\n\n[employees]\nid,name,department_id\n101,Aoi,1\n102,Ren,2\n103,Mio,2",
+  "starterSql": "SELECT\n  departments.name AS department_name,\n  -- 社員数を employee_count として出します\nFROM departments\nLEFT JOIN employees\n  ON employees.department_id = departments.id\nGROUP BY departments.id, departments.name\nORDER BY departments.name ASC;",
+  "solutionSql": "SELECT\n  departments.name AS department_name,\n  COUNT(employees.id) AS employee_count\nFROM departments\nLEFT JOIN employees\n  ON employees.department_id = departments.id\nGROUP BY departments.id, departments.name\nORDER BY departments.name ASC;",
+  "expectedCsv": "department_name,employee_count\ndev,2\nhr,0\nsales,1\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[departments]\nid,name\n1,sales\n2,dev\n3,hr\n\n[employees]\nid,name,department_id\n101,Aoi,1\n102,Ren,2\n103,Mio,2",
+      "expectedCsv": "department_name,employee_count\ndev,2\nhr,0\nsales,1\n"
+    },
+    {
+      "name": "全員なしの部署あり",
+      "csv": "[departments]\nid,name\n1,a\n2,b\n\n[employees]\nid,name,department_id\n1,Taro,1",
+      "expectedCsv": "department_name,employee_count\na,1\nb,0\n"
+    }
+  ]
+}

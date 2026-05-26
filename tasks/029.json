@@ -1,0 +1,32 @@
+{
+  "number": 29,
+  "slug": "three-day-login-streaks",
+  "title": "[挑戦しよう] 3日連続ログインを見つける",
+  "statement": "users と logins から、3日連続でログインしたユーザーを表示してください。出力する列は user_name, streak_start です。\n\n同じ日に複数回ログインしていても1日として扱います。3日連続の開始日を streak_start として表示してください。3日連続の区間が複数ある場合はすべて表示します。user_name の昇順、streak_start の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "重複排除",
+      "value": "同じユーザーの同じ login_date は1回だけ扱います"
+    },
+    {
+      "name": "連続日の判定",
+      "value": "開始日から1日後、2日後のログインが存在するかを確認します"
+    }
+  ],
+  "csv": "[users]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[logins]\nid,user_id,login_date\n1,1,2026-01-01\n2,1,2026-01-02\n3,1,2026-01-03\n4,1,2026-01-03\n5,1,2026-01-05\n6,2,2026-01-01\n7,2,2026-01-03\n8,2,2026-01-04\n9,3,2026-02-10\n10,3,2026-02-11\n11,3,2026-02-12\n12,3,2026-02-13",
+  "starterSql": "WITH daily_logins AS (\n  SELECT DISTINCT\n    user_id,\n    login_date\n  FROM logins\n)\nSELECT\n  users.name AS user_name,\n  start_day.login_date AS streak_start\nFROM daily_logins AS start_day\nJOIN users\n  ON users.id = start_day.user_id\n-- 1日後、2日後のログインがあるか確認します\nORDER BY users.name ASC, start_day.login_date ASC;",
+  "solutionSql": "WITH daily_logins AS (\n  SELECT DISTINCT\n    user_id,\n    login_date\n  FROM logins\n)\nSELECT\n  users.name AS user_name,\n  start_day.login_date AS streak_start\nFROM daily_logins AS start_day\nJOIN daily_logins AS next_day\n  ON next_day.user_id = start_day.user_id\n AND next_day.login_date = date(start_day.login_date, '+1 day')\nJOIN daily_logins AS third_day\n  ON third_day.user_id = start_day.user_id\n AND third_day.login_date = date(start_day.login_date, '+2 day')\nJOIN users\n  ON users.id = start_day.user_id\nORDER BY users.name ASC, start_day.login_date ASC;",
+  "expectedCsv": "user_name,streak_start\nAoi,2026-01-01\nMio,2026-02-10\nMio,2026-02-11\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[users]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[logins]\nid,user_id,login_date\n1,1,2026-01-01\n2,1,2026-01-02\n3,1,2026-01-03\n4,1,2026-01-03\n5,1,2026-01-05\n6,2,2026-01-01\n7,2,2026-01-03\n8,2,2026-01-04\n9,3,2026-02-10\n10,3,2026-02-11\n11,3,2026-02-12\n12,3,2026-02-13",
+      "expectedCsv": "user_name,streak_start\nAoi,2026-01-01\nMio,2026-02-10\nMio,2026-02-11\n"
+    },
+    {
+      "name": "4日連続は2つの開始日になる",
+      "csv": "[users]\nid,name\n1,Yui\n2,Kai\n\n[logins]\nid,user_id,login_date\n1,1,2026-03-01\n2,1,2026-03-02\n3,1,2026-03-03\n4,1,2026-03-04\n5,2,2026-03-01\n6,2,2026-03-03\n7,2,2026-03-04",
+      "expectedCsv": "user_name,streak_start\nYui,2026-03-01\nYui,2026-03-02\n"
+    }
+  ]
+}

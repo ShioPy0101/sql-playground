@@ -1,0 +1,32 @@
+{
+  "number": 26,
+  "slug": "orders-with-at-least-two-distinct-products",
+  "title": "[挑戦しよう] すべての注文が2種類以上の商品を含む顧客",
+  "statement": "customers, orders, order_items から、すべての注文が2種類以上の商品を含んでいる顧客を表示してください。出力する列は customer_name です。\n\n注文が1件もない顧客は対象外です。同じ商品が複数明細に分かれている場合でも、種類数は1として数えます。customer_name の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "注文単位の集計",
+      "value": "注文ごとに DISTINCT product_id の数を数えます"
+    },
+    {
+      "name": "全注文の条件",
+      "value": "2種類未満の商品しかない注文が1つでもある顧客は除外します"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id\n101,1\n102,1\n103,2\n104,2\n105,3\n\n[order_items]\nid,order_id,product_id,quantity\n1,101,10,1\n2,101,11,2\n3,102,10,1\n4,102,12,1\n5,103,10,1\n6,104,10,1\n7,104,11,1\n8,105,12,1\n9,105,13,1",
+  "starterSql": "WITH order_product_counts AS (\n  SELECT\n    orders.id AS order_id,\n    orders.customer_id,\n    COUNT(DISTINCT order_items.product_id) AS product_count\n  FROM orders\n  JOIN order_items\n    ON order_items.order_id = orders.id\n  GROUP BY orders.id, orders.customer_id\n)\nSELECT\n  customers.name AS customer_name\nFROM customers\n-- 条件を満たす顧客だけを残します\nORDER BY customers.name ASC;",
+  "solutionSql": "WITH order_product_counts AS (\n  SELECT\n    orders.id AS order_id,\n    orders.customer_id,\n    COUNT(DISTINCT order_items.product_id) AS product_count\n  FROM orders\n  JOIN order_items\n    ON order_items.order_id = orders.id\n  GROUP BY orders.id, orders.customer_id\n)\nSELECT\n  customers.name AS customer_name\nFROM customers\nWHERE EXISTS (\n  SELECT 1\n  FROM orders\n  WHERE orders.customer_id = customers.id\n)\nAND NOT EXISTS (\n  SELECT 1\n  FROM order_product_counts\n  WHERE order_product_counts.customer_id = customers.id\n    AND order_product_counts.product_count < 2\n)\nORDER BY customers.name ASC;",
+  "expectedCsv": "customer_name\nAoi\nMio\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id\n101,1\n102,1\n103,2\n104,2\n105,3\n\n[order_items]\nid,order_id,product_id,quantity\n1,101,10,1\n2,101,11,2\n3,102,10,1\n4,102,12,1\n5,103,10,1\n6,104,10,1\n7,104,11,1\n8,105,12,1\n9,105,13,1",
+      "expectedCsv": "customer_name\nAoi\nMio\n"
+    },
+    {
+      "name": "重複商品は1種類として数える",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id\n1,1\n2,2\n\n[order_items]\nid,order_id,product_id,quantity\n1,1,10,1\n2,1,10,2\n3,2,10,1\n4,2,11,1",
+      "expectedCsv": "customer_name\nKai\n"
+    }
+  ]
+}

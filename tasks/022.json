@@ -1,0 +1,32 @@
+{
+  "number": 22,
+  "slug": "latest-order-grew-from-previous",
+  "title": "[挑戦しよう] 直近の注文が前回より増えた顧客",
+  "statement": "customers と orders から、直近の注文金額がその1つ前の注文金額より大きい顧客を表示してください。出力する列は customer_name, latest_total, previous_total です。\n\n注文が1件しかない顧客は対象外です。直近の注文は ordered_at が最も新しい注文とします。customer_name の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "直近と前回",
+      "value": "注文日で並べて、顧客ごとの1番目と2番目の注文を比較します"
+    },
+    {
+      "name": "対象",
+      "value": "直近の注文金額が前回より大きい顧客だけを残します"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,ordered_at,total\n101,1,2026-01-10,1200\n102,1,2026-02-05,1800\n103,2,2026-01-12,2000\n104,2,2026-02-08,1500\n105,3,2026-01-20,700\n106,4,2026-02-01,900\n107,4,2026-02-20,1100",
+  "starterSql": "WITH ranked_orders AS (\n  SELECT\n    customer_id,\n    total,\n    ROW_NUMBER() OVER (\n      PARTITION BY customer_id\n      ORDER BY ordered_at DESC, id DESC\n    ) AS rn\n  FROM orders\n), latest_pairs AS (\n  SELECT\n    customer_id\n    -- 直近と前回の total を取り出します\n  FROM ranked_orders\n  GROUP BY customer_id\n)\nSELECT\n  customers.name AS customer_name,\n  latest_pairs.latest_total,\n  latest_pairs.previous_total\nFROM latest_pairs\nJOIN customers\n  ON customers.id = latest_pairs.customer_id\nWHERE latest_pairs.latest_total > latest_pairs.previous_total\nORDER BY customers.name ASC;",
+  "solutionSql": "WITH ranked_orders AS (\n  SELECT\n    customer_id,\n    CAST(total AS INTEGER) AS total,\n    ROW_NUMBER() OVER (\n      PARTITION BY customer_id\n      ORDER BY ordered_at DESC, id DESC\n    ) AS rn\n  FROM orders\n), latest_pairs AS (\n  SELECT\n    customer_id,\n    MAX(CASE WHEN rn = 1 THEN total END) AS latest_total,\n    MAX(CASE WHEN rn = 2 THEN total END) AS previous_total\n  FROM ranked_orders\n  GROUP BY customer_id\n)\nSELECT\n  customers.name AS customer_name,\n  latest_pairs.latest_total,\n  latest_pairs.previous_total\nFROM latest_pairs\nJOIN customers\n  ON customers.id = latest_pairs.customer_id\nWHERE latest_pairs.previous_total IS NOT NULL\n  AND latest_pairs.latest_total > latest_pairs.previous_total\nORDER BY customers.name ASC;",
+  "expectedCsv": "customer_name,latest_total,previous_total\nAoi,1800,1200\nSora,1100,900\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,ordered_at,total\n101,1,2026-01-10,1200\n102,1,2026-02-05,1800\n103,2,2026-01-12,2000\n104,2,2026-02-08,1500\n105,3,2026-01-20,700\n106,4,2026-02-01,900\n107,4,2026-02-20,1100",
+      "expectedCsv": "customer_name,latest_total,previous_total\nAoi,1800,1200\nSora,1100,900\n"
+    },
+    {
+      "name": "同日注文はidで判定",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n3,Haru\n\n[orders]\nid,customer_id,ordered_at,total\n1,1,2026-03-01,100\n2,1,2026-03-02,130\n3,2,2026-03-01,300\n4,2,2026-03-02,200\n5,3,2026-04-01,50\n6,3,2026-04-01,80",
+      "expectedCsv": "customer_name,latest_total,previous_total\nHaru,80,50\nYui,130,100\n"
+    }
+  ]
+}

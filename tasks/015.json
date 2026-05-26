@@ -1,0 +1,32 @@
+{
+  "number": 15,
+  "slug": "join-aggregate-confirm",
+  "title": "[確認しよう] JOINしてから集計する",
+  "statement": "customers と orders をつないで、顧客ごとの注文合計を求めてください。customer_name と total_amount を表示し、total_amount が高い順に並べます。\n\nJOIN で表をつないだあとに GROUP BY を使うと、別テーブルの名前を表示しながら集計できます。\n今回は orders.customer_id と customers.id をつなぎ、customers.name ごとに SUM(total) を計算します。\n\nこの問題は確認用です。JOIN、GROUP BY、SUM が順番に組み合わさる流れを見てみましょう。",
+  "constraints": [
+    {
+      "name": "結合",
+      "value": "customers と orders を INNER JOIN します"
+    },
+    {
+      "name": "集計",
+      "value": "顧客ごとの注文金額合計を出します"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,2,800\n103,1,500\n104,3,2000",
+  "starterSql": "SELECT\n  customers.name AS customer_name,\n  SUM(CAST(orders.total AS INTEGER)) AS total_amount\nFROM customers\nINNER JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY total_amount DESC, customer_name ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  SUM(CAST(orders.total AS INTEGER)) AS total_amount\nFROM customers\nINNER JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY total_amount DESC, customer_name ASC;",
+  "expectedCsv": "customer_name,total_amount\nMio,2000\nAoi,1700\nRen,800\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,2,800\n103,1,500\n104,3,2000",
+      "expectedCsv": "customer_name,total_amount\nMio,2000\nAoi,1700\nRen,800\n"
+    },
+    {
+      "name": "同じ合計",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id,total\n1,1,500\n2,2,300\n3,2,200",
+      "expectedCsv": "customer_name,total_amount\nKai,500\nYui,500\n"
+    }
+  ]
+}

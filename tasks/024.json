@@ -1,0 +1,32 @@
+{
+  "number": 24,
+  "slug": "users-completed-all-required-lessons",
+  "title": "[挑戦しよう] 必須レッスンをすべて完了したユーザー",
+  "statement": "users, lessons, progress から、必須レッスンをすべて完了しているユーザーを表示してください。出力する列は user_name です。\n\nlessons.required が 'yes' のレッスンだけが必須です。progress.status が 'completed' のものだけを完了とみなします。user_name の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "全件条件",
+      "value": "すべての必須レッスンが完了していることを判定します"
+    },
+    {
+      "name": "未完了の扱い",
+      "value": "進捗がない、または completed 以外の必須レッスンがあるユーザーは除外します"
+    }
+  ],
+  "csv": "[users]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[lessons]\nid,title,required\n101,SELECT,yes\n102,JOIN,yes\n103,WINDOW,no\n\n[progress]\nid,user_id,lesson_id,status\n1,1,101,completed\n2,1,102,completed\n3,2,101,completed\n4,2,102,started\n5,3,101,completed\n6,3,102,completed\n7,3,103,completed\n8,4,101,completed",
+  "starterSql": "SELECT\n  users.name AS user_name\nFROM users\nWHERE NOT EXISTS (\n  -- 完了していない必須レッスンが存在しないことを確認します\n)\nORDER BY users.name ASC;",
+  "solutionSql": "SELECT\n  users.name AS user_name\nFROM users\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM lessons\n  WHERE lessons.required = 'yes'\n    AND NOT EXISTS (\n      SELECT 1\n      FROM progress\n      WHERE progress.user_id = users.id\n        AND progress.lesson_id = lessons.id\n        AND progress.status = 'completed'\n    )\n)\nORDER BY users.name ASC;",
+  "expectedCsv": "user_name\nAoi\nMio\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[users]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[lessons]\nid,title,required\n101,SELECT,yes\n102,JOIN,yes\n103,WINDOW,no\n\n[progress]\nid,user_id,lesson_id,status\n1,1,101,completed\n2,1,102,completed\n3,2,101,completed\n4,2,102,started\n5,3,101,completed\n6,3,102,completed\n7,3,103,completed\n8,4,101,completed",
+      "expectedCsv": "user_name\nAoi\nMio\n"
+    },
+    {
+      "name": "任意レッスンは未完了でもよい",
+      "csv": "[users]\nid,name\n1,Yui\n2,Kai\n3,Haru\n\n[lessons]\nid,title,required\n1,Basic,yes\n2,Advanced,yes\n3,Extra,no\n\n[progress]\nid,user_id,lesson_id,status\n1,1,1,completed\n2,1,2,completed\n3,2,1,completed\n4,2,2,completed\n5,2,3,started\n6,3,1,completed",
+      "expectedCsv": "user_name\nKai\nYui\n"
+    }
+  ]
+}

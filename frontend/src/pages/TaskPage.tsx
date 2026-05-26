@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { fetchCurrentUser, fetchTask, submitTask, Task, TaskSubmitResult } from "../api/client";
+import { fetchCurrentUser, fetchTask, fetchTasks, submitTask, Task, TaskSubmitResult } from "../api/client";
 import { EditorPanel } from "../components/EditorPanel";
 import { JudgePanel } from "../components/JudgePanel";
 import { ResultPanel } from "../components/ResultPanel";
@@ -11,8 +11,16 @@ type TaskPageProps = {
   number: string;
 };
 
+type TaskNavigation = {
+  previousNumber?: number;
+  nextNumber?: number;
+  total: number;
+  position?: number;
+};
+
 export function TaskPage({ number }: TaskPageProps) {
   const [task, setTask] = useState<Task | null>(null);
+  const [taskNavigation, setTaskNavigation] = useState<TaskNavigation>({ total: 0 });
   const [query, setQuery] = useState("");
   const [result, setResult] = useState("");
   const [judgeResult, setJudgeResult] = useState<TaskSubmitResult | null>(null);
@@ -40,6 +48,35 @@ export function TaskPage({ number }: TaskPageProps) {
       .catch((err) => {
         if (!ignore) {
           setError(err instanceof Error ? err.message : "問題の取得に失敗しました");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [number]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetchTasks()
+      .then((payload) => {
+        if (ignore) {
+          return;
+        }
+
+        const tasks = [...payload.tasks].sort((a, b) => a.number - b.number);
+        const currentIndex = tasks.findIndex((summary) => String(summary.number) === number);
+        setTaskNavigation({
+          previousNumber: currentIndex > 0 ? tasks[currentIndex - 1].number : undefined,
+          nextNumber: currentIndex >= 0 && currentIndex < tasks.length - 1 ? tasks[currentIndex + 1].number : undefined,
+          total: tasks.length,
+          position: currentIndex >= 0 ? currentIndex + 1 : undefined
+        });
+      })
+      .catch(() => {
+        if (!ignore) {
+          setTaskNavigation({ total: 0 });
         }
       });
 
@@ -125,6 +162,37 @@ export function TaskPage({ number }: TaskPageProps) {
 
   return (
     <main className="app-shell task-shell">
+      <nav className="task-nav" aria-label="問題ナビゲーション">
+        <a className="text-link" href="/">
+          タスク問題に戻る
+        </a>
+        <div className="task-nav-pager">
+          {taskNavigation.previousNumber ? (
+            <a className="secondary-link compact" href={`/tasks/${taskNavigation.previousNumber}`}>
+              前の問題
+            </a>
+          ) : (
+            <span className="secondary-link compact disabled" aria-disabled="true">
+              前の問題
+            </span>
+          )}
+          {taskNavigation.position ? (
+            <span className="task-position">
+              {taskNavigation.position} / {taskNavigation.total}
+            </span>
+          ) : null}
+          {taskNavigation.nextNumber ? (
+            <a className="secondary-link compact" href={`/tasks/${taskNavigation.nextNumber}`}>
+              次の問題
+            </a>
+          ) : (
+            <span className="secondary-link compact disabled" aria-disabled="true">
+              次の問題
+            </span>
+          )}
+        </div>
+      </nav>
+
       <header className="app-header">
         <div>
           <p className="eyebrow">SQL課題</p>
@@ -156,6 +224,21 @@ export function TaskPage({ number }: TaskPageProps) {
         <ResultPanel result={result} error={error} emptyText="実行するとサンプルに対する結果を確認できます。" />
         <JudgePanel result={judgeResult} />
       </form>
+
+      <nav className="task-bottom-nav" aria-label="次の操作">
+        <a className="secondary-link" href="/">
+          タスク問題に戻る
+        </a>
+        {taskNavigation.nextNumber ? (
+          <a className="run-button link-button" href={`/tasks/${taskNavigation.nextNumber}`}>
+            次の問題へ
+          </a>
+        ) : (
+          <span className="secondary-link disabled" aria-disabled="true">
+            最後の問題です
+          </span>
+        )}
+      </nav>
     </main>
   );
 }

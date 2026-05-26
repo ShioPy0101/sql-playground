@@ -15,6 +15,7 @@ export type Task = {
   constraints: Constraint[];
   csv: string;
   starterSql: string;
+  solutionSql: string;
   expectedCsv: string;
   testCount: number;
   savedQuery?: string;
@@ -70,6 +71,23 @@ export type AdminSubmissionsResponse = {
   submissions: TaskSubmission[];
 };
 
+export type TaskSubmissionsResponse = {
+  submissions: TaskSubmission[];
+};
+
+export type TaskSolutionCheck = {
+  taskNumber: number;
+  taskSlug: string;
+  taskTitle: string;
+  passed: boolean;
+  cases: TaskCaseResult[];
+  error?: string;
+};
+
+export type AdminSolutionChecksResponse = {
+  checks: TaskSolutionCheck[];
+};
+
 export async function executeSQL(csv: string, query: string) {
   return postJSON<ExecuteResponse>("/api/sqlite/execute", { csv, query });
 }
@@ -90,8 +108,16 @@ export async function submitTask(number: string, query: string) {
   return postJSON<TaskSubmitResult>(`/api/tasks/${number}/submit`, { query });
 }
 
+export async function fetchTaskSubmissions(number: string) {
+  return getJSON<TaskSubmissionsResponse>(`/api/tasks/${number}/history`);
+}
+
 export async function fetchAdminSubmissions() {
   return getJSON<AdminSubmissionsResponse>("/api/admin/submissions");
+}
+
+export async function checkAdminSolutions() {
+  return postJSON<AdminSolutionChecksResponse>("/api/admin/check-solutions", {});
 }
 
 async function getJSON<T>(url: string) {

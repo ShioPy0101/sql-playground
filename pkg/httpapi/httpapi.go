@@ -63,6 +63,7 @@ func NumberParam(r *http.Request) string {
 
 	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
 	path = strings.TrimSuffix(path, "/submit")
+	path = strings.TrimSuffix(path, "/history")
 	return strings.Trim(path, "/")
 }
 

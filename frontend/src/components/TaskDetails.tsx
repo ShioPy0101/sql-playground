@@ -24,7 +24,7 @@ export function TaskDetails({ task }: TaskDetailsProps) {
 
       <div className="task-constraints">
         <div className="panel-heading">
-          <h2>制約</h2>
+          <h2>制約・メモ</h2>
           <span>{task.constraints.length} 件</span>
         </div>
         <dl>

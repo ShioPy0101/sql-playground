@@ -9,6 +9,10 @@
       "destination": "/api/tasks/submit?number=:number"
     },
     {
+      "source": "/api/tasks/:number/history",
+      "destination": "/api/tasks/history?number=:number"
+    },
+    {
       "source": "/api/tasks/:number",
       "destination": "/api/tasks/show?number=:number"
     },

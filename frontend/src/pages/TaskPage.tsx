@@ -1,11 +1,19 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { fetchCurrentUser, fetchTask, fetchTasks, submitTask, Task, TaskSubmitResult } from "../api/client";
+import { FormEvent, useEffect, useState } from "react";
+import {
+  fetchCurrentUser,
+  fetchTask,
+  fetchTasks,
+  fetchTaskSubmissions,
+  submitTask,
+  Task,
+  TaskSubmission,
+  TaskSubmitResult
+} from "../api/client";
 import { EditorPanel } from "../components/EditorPanel";
 import { JudgePanel } from "../components/JudgePanel";
 import { ResultPanel } from "../components/ResultPanel";
 import { TaskDetails } from "../components/TaskDetails";
 import { executeSQL } from "../api/client";
-import { formatTableLabel } from "../utils/csv";
 
 type TaskPageProps = {
   number: string;
@@ -18,6 +26,13 @@ type TaskNavigation = {
   position?: number;
 };
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    dateStyle: "medium",
+    timeStyle: "medium"
+  }).format(new Date(value));
+}
+
 export function TaskPage({ number }: TaskPageProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [taskNavigation, setTaskNavigation] = useState<TaskNavigation>({ total: 0 });
@@ -26,9 +41,11 @@ export function TaskPage({ number }: TaskPageProps) {
   const [judgeResult, setJudgeResult] = useState<TaskSubmitResult | null>(null);
   const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
+  const [historyError, setHistoryError] = useState("");
+  const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
+  const [showSolution, setShowSolution] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tableLabel = useMemo(() => formatTableLabel(task?.csv ?? ""), [task]);
 
   useEffect(() => {
     let ignore = false;
@@ -36,6 +53,8 @@ export function TaskPage({ number }: TaskPageProps) {
     setTask(null);
     setJudgeResult(null);
     setResult("");
+    setSubmissions([]);
+    setShowSolution(false);
 
     fetchTask(number)
       .then((payload) => {
@@ -48,6 +67,27 @@ export function TaskPage({ number }: TaskPageProps) {
       .catch((err) => {
         if (!ignore) {
           setError(err instanceof Error ? err.message : "問題の取得に失敗しました");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [number]);
+
+  useEffect(() => {
+    let ignore = false;
+    setHistoryError("");
+
+    fetchTaskSubmissions(number)
+      .then((payload) => {
+        if (!ignore) {
+          setSubmissions(payload.submissions ?? []);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          setHistoryError(err instanceof Error ? err.message : "解答履歴の取得に失敗しました");
         }
       });
 
@@ -132,12 +172,24 @@ export function TaskPage({ number }: TaskPageProps) {
     try {
       const payload = await submitTask(number, query);
       setJudgeResult(payload);
+      const history = await fetchTaskSubmissions(number);
+      setSubmissions(history.submissions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "提出に失敗しました");
       setJudgeResult(null);
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleResetQuery() {
+    if (!task) {
+      return;
+    }
+    setQuery(task.starterSql);
+    setResult("");
+    setJudgeResult(null);
+    setError("");
   }
 
   if (!task && !error) {
@@ -200,6 +252,12 @@ export function TaskPage({ number }: TaskPageProps) {
           {userId ? <p className="user-chip">User {userId.replace(/^user_/, "").slice(0, 10)}</p> : null}
         </div>
         <div className="task-actions">
+          <button type="button" className="secondary-button" onClick={() => setShowSolution((current) => !current)}>
+            {showSolution ? "答えを隠す" : "答えを見る"}
+          </button>
+          <button type="button" className="secondary-button" onClick={handleResetQuery} disabled={isRunning || isSubmitting}>
+            入力を最初に戻す
+          </button>
           <button form="task-form" className="secondary-button" disabled={isRunning || isSubmitting}>
             {isRunning ? "実行中..." : "実行"}
           </button>
@@ -221,8 +279,50 @@ export function TaskPage({ number }: TaskPageProps) {
           onChange={setQuery}
         />
         {/* <EditorPanel title="CSV" label={tableLabel} value={task.csv} ariaLabel="Task CSV" readOnly /> */}
+        {showSolution ? (
+          <section className="solution-panel" aria-label="想定解答">
+            <div className="panel-heading">
+              <h2>想定解答</h2>
+              <button type="button" className="text-button" onClick={() => setQuery(task.solutionSql)}>
+                入力へ反映
+              </button>
+            </div>
+            <pre className="sql-preview">{task.solutionSql || "想定解答が登録されていません。"}</pre>
+          </section>
+        ) : null}
         <ResultPanel result={result} error={error} emptyText="実行するとサンプルに対する結果を確認できます。" />
         <JudgePanel result={judgeResult} />
+        <section className="submission-history" aria-label="解答履歴">
+          <div className="panel-heading">
+            <h2>解答履歴</h2>
+            <span>{submissions.length}件</span>
+          </div>
+          {historyError ? <pre className="error-output inline">{historyError}</pre> : null}
+          {submissions.length === 0 && !historyError ? (
+            <div className="empty-state compact">
+              <p>まだこの問題への提出はありません。</p>
+            </div>
+          ) : (
+            <div className="history-list">
+              {submissions.map((submission) => (
+                <article className="history-item" key={submission.id}>
+                  <div className="history-item-heading">
+                    <div>
+                      <span className={submission.passed ? "badge accepted" : "badge failed"}>
+                        {submission.passed ? "正解" : "不正解"}
+                      </span>
+                      <time>{formatDate(submission.submittedAt)}</time>
+                    </div>
+                    <button type="button" className="text-button" onClick={() => setQuery(submission.query)}>
+                      このSQLに戻す
+                    </button>
+                  </div>
+                  <pre className="history-query">{submission.query}</pre>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </form>
 
       <nav className="task-bottom-nav" aria-label="次の操作">

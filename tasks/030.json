@@ -1,0 +1,32 @@
+{
+  "number": 30,
+  "slug": "city-revenue-share",
+  "title": "[挑戦しよう] 都市内売上シェアを計算する",
+  "statement": "customers と orders から、都市ごとの顧客別売上シェアを表示してください。出力する列は city, customer_name, customer_revenue, city_share です。\n\ncustomer_revenue は顧客ごとの注文合計です。city_share は customer_revenue / その都市の売上合計 * 100 を ROUND(値, 1) で小数1桁にします。注文がない顧客は対象外です。city の昇順、city_share の降順、customer_name の昇順で並べます。",
+  "constraints": [
+    {
+      "name": "二段階集計",
+      "value": "顧客別売上を集計してから都市別合計と比べます"
+    },
+    {
+      "name": "割合",
+      "value": "都市内での売上割合をパーセントで計算します"
+    }
+  ],
+  "csv": "[customers]\nid,name,city\n1,Aoi,Tokyo\n2,Ren,Tokyo\n3,Mio,Osaka\n4,Sora,Osaka\n5,Yui,Kyoto\n\n[orders]\nid,customer_id,total\n101,1,1000\n102,1,500\n103,2,500\n104,3,1200\n105,4,800\n106,4,400",
+  "starterSql": "WITH customer_revenue AS (\n  SELECT\n    customers.city,\n    customers.name AS customer_name\n    -- 顧客別売上を出します\n  FROM customers\n  JOIN orders\n    ON orders.customer_id = customers.id\n  GROUP BY customers.id, customers.city, customers.name\n), city_revenue AS (\n  SELECT\n    city\n    -- 都市別売上を出します\n  FROM customer_revenue\n  GROUP BY city\n)\nSELECT\n  customer_revenue.city,\n  customer_revenue.customer_name,\n  customer_revenue.customer_revenue,\n  ROUND(customer_revenue.customer_revenue * 100.0 / city_revenue.total_revenue, 1) AS city_share\nFROM customer_revenue\nJOIN city_revenue\n  ON city_revenue.city = customer_revenue.city\nORDER BY customer_revenue.city ASC, city_share DESC, customer_revenue.customer_name ASC;",
+  "solutionSql": "WITH customer_revenue AS (\n  SELECT\n    customers.city,\n    customers.name AS customer_name,\n    SUM(CAST(orders.total AS INTEGER)) AS customer_revenue\n  FROM customers\n  JOIN orders\n    ON orders.customer_id = customers.id\n  GROUP BY customers.id, customers.city, customers.name\n), city_revenue AS (\n  SELECT\n    city,\n    SUM(customer_revenue) AS total_revenue\n  FROM customer_revenue\n  GROUP BY city\n)\nSELECT\n  customer_revenue.city,\n  customer_revenue.customer_name,\n  customer_revenue.customer_revenue,\n  ROUND(customer_revenue.customer_revenue * 100.0 / city_revenue.total_revenue, 1) AS city_share\nFROM customer_revenue\nJOIN city_revenue\n  ON city_revenue.city = customer_revenue.city\nORDER BY customer_revenue.city ASC, city_share DESC, customer_revenue.customer_name ASC;",
+  "expectedCsv": "city,customer_name,customer_revenue,city_share\nOsaka,Mio,1200,50.0\nOsaka,Sora,1200,50.0\nTokyo,Aoi,1500,75.0\nTokyo,Ren,500,25.0\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name,city\n1,Aoi,Tokyo\n2,Ren,Tokyo\n3,Mio,Osaka\n4,Sora,Osaka\n5,Yui,Kyoto\n\n[orders]\nid,customer_id,total\n101,1,1000\n102,1,500\n103,2,500\n104,3,1200\n105,4,800\n106,4,400",
+      "expectedCsv": "city,customer_name,customer_revenue,city_share\nOsaka,Mio,1200,50.0\nOsaka,Sora,1200,50.0\nTokyo,Aoi,1500,75.0\nTokyo,Ren,500,25.0\n"
+    },
+    {
+      "name": "同率は名前順",
+      "csv": "[customers]\nid,name,city\n1,Yui,A\n2,Kai,A\n3,Haru,B\n\n[orders]\nid,customer_id,total\n1,1,100\n2,2,100\n3,3,300",
+      "expectedCsv": "city,customer_name,customer_revenue,city_share\nA,Kai,100,50.0\nA,Yui,100,50.0\nB,Haru,300,100.0\n"
+    }
+  ]
+}

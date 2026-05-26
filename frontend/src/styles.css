@@ -779,7 +779,15 @@ th {
 }
 
 .admin-table-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
   max-height: calc(100vh - 210px);
+}
+
+.admin-table-panel .table-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 .admin-table-panel tbody tr {

@@ -1,0 +1,32 @@
+{
+  "number": 46,
+  "slug": "table-design-create-users-with-unique-email",
+  "title": "[テーブル設計][書いてみよう] email をユニークキーにする",
+  "statement": "ユーザーを保存する users テーブルを CREATE TABLE で作成し、email が重複しないようにユニークキーを設定してください。\n\n必要な列は id, email, display_name, created_at です。id は INTEGER PRIMARY KEY、email, display_name, created_at はすべて TEXT NOT NULL にします。email には UNIQUE 制約を付けます。\n\nユニークキーは「この列の値は表の中で重複してはいけない」というルールです。ログインIDやメールアドレスのように、同じ値が複数行に存在すると業務上困る列に使います。主キーは行そのものを識別する代表のキーですが、ユニークキーは主キー以外にも重複禁止の候補キーを持たせたいときに使います。",
+  "constraints": [
+    {
+      "name": "主キー",
+      "value": "id は INTEGER PRIMARY KEY にします"
+    },
+    {
+      "name": "ユニークキー",
+      "value": "email には UNIQUE 制約を付け、重複を禁止します"
+    },
+    {
+      "name": "必須列",
+      "value": "email, display_name, created_at は TEXT NOT NULL にします"
+    }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  email TEXT NOT NULL,\n  display_name TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  email TEXT NOT NULL UNIQUE,\n  display_name TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);",
+  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM pragma_table_info('users') AS p UNION ALL SELECT 'unique_key' AS check_type, ii.name AS item_name, il.name AS detail, CAST(il.\"unique\" AS TEXT) AS required, CAST(ii.seqno + 1 AS TEXT) AS key_order FROM pragma_index_list('users') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.\"unique\" = 1 AND ii.name = 'email' ORDER BY check_type, item_name;",
+  "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,created_at,TEXT,1,0\ncolumn,display_name,TEXT,1,0\ncolumn,email,TEXT,1,0\ncolumn,id,INTEGER,0,1\nunique_key,email,sqlite_autoindex_users_1,1,1\n",
+  "tests": [
+    {
+      "name": "スキーマとユニークキー確認",
+      "csv": "",
+      "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,created_at,TEXT,1,0\ncolumn,display_name,TEXT,1,0\ncolumn,email,TEXT,1,0\ncolumn,id,INTEGER,0,1\nunique_key,email,sqlite_autoindex_users_1,1,1\n"
+    }
+  ]
+}

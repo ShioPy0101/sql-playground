@@ -48,6 +48,7 @@ type PublicTask struct {
 	Constraints []Constraint `json:"constraints"`
 	CSV         string       `json:"csv"`
 	StarterSQL  string       `json:"starterSql"`
+	SolutionSQL string       `json:"solutionSql"`
 	ExpectedCSV string       `json:"expectedCsv"`
 	TestCount   int          `json:"testCount"`
 	SavedQuery  string       `json:"savedQuery,omitempty"`
@@ -69,6 +70,15 @@ type PublicTaskSummary struct {
 type TaskSubmitResult struct {
 	Passed bool             `json:"passed"`
 	Cases  []TaskCaseResult `json:"cases"`
+}
+
+type TaskSolutionCheck struct {
+	TaskNumber int              `json:"taskNumber"`
+	TaskSlug   string           `json:"taskSlug"`
+	TaskTitle  string           `json:"taskTitle"`
+	Passed     bool             `json:"passed"`
+	Cases      []TaskCaseResult `json:"cases"`
+	Error      string           `json:"error,omitempty"`
 }
 
 type TaskCaseResult struct {
@@ -221,12 +231,66 @@ func (s *TaskService) Submissions() ([]TaskSubmission, error) {
 	return s.submissions.List()
 }
 
+func (s *TaskService) SubmissionsForUserTask(number string, userID string) ([]TaskSubmission, error) {
+	task, err := s.LoadTask(number)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.submissions.ListByUserTask(userID, task.Number)
+}
+
+func (s *TaskService) CheckAllSolutions() ([]TaskSolutionCheck, error) {
+	summaries, err := s.ListPublicTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	checks := make([]TaskSolutionCheck, 0, len(summaries))
+	for _, summary := range summaries {
+		task, err := s.LoadTask(strconv.Itoa(summary.Number))
+		if err != nil {
+			return nil, err
+		}
+
+		check := TaskSolutionCheck{
+			TaskNumber: task.Number,
+			TaskSlug:   task.Slug,
+			TaskTitle:  task.Title,
+		}
+		if strings.TrimSpace(task.SolutionSQL) == "" {
+			check.Error = "solutionSql is empty"
+			check.Passed = false
+			checks = append(checks, check)
+			continue
+		}
+
+		result := s.checkTask(task, task.SolutionSQL)
+		check.Passed = result.Passed
+		check.Cases = result.Cases
+		checks = append(checks, check)
+	}
+
+	return checks, nil
+}
+
 func (s *TaskService) submit(number string, query string, userID string) (TaskSubmitResult, error) {
 	task, err := s.LoadTask(number)
 	if err != nil {
 		return TaskSubmitResult{}, err
 	}
 
+	result := s.checkTask(task, query)
+	if userID != "" {
+		if err := s.recordSubmission(task, query, result, userID); err != nil {
+			return TaskSubmitResult{}, err
+		}
+	}
+
+	return result, nil
+}
+
+func (s *TaskService) checkTask(task Task, query string) TaskSubmitResult {
 	tests := task.Tests
 	if len(tests) == 0 {
 		tests = []TaskTestCase{{
@@ -258,13 +322,7 @@ func (s *TaskService) submit(number string, query string, userID string) (TaskSu
 		result.Cases = append(result.Cases, caseResult)
 	}
 
-	if userID != "" {
-		if err := s.recordSubmission(task, query, result, userID); err != nil {
-			return TaskSubmitResult{}, err
-		}
-	}
-
-	return result, nil
+	return result
 }
 
 func (s *TaskService) LoadTask(number string) (Task, error) {
@@ -338,6 +396,7 @@ func publicTask(task Task) PublicTask {
 		Constraints: task.Constraints,
 		CSV:         task.CSV,
 		StarterSQL:  task.StarterSQL,
+		SolutionSQL: task.SolutionSQL,
 		ExpectedCSV: task.ExpectedCSV,
 		TestCount:   len(task.Tests),
 	}

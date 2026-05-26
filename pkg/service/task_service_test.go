@@ -180,6 +180,108 @@ func TestTaskServiceSubmitForUserRecordsSubmission(t *testing.T) {
 	}
 }
 
+func TestTaskServiceSubmissionsForUserTaskFiltersHistory(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "001.json", `{
+		"number": 1,
+		"slug": "first",
+		"title": "First",
+		"statement": "First task.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": []
+	}`)
+	writeTaskFile(t, taskDir, "002.json", `{
+		"number": 2,
+		"slug": "second",
+		"title": "Second",
+		"statement": "Second task.",
+		"constraints": [],
+		"csv": "id\n2",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n2\n",
+		"tests": []
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	service := newTestTaskService(t)
+
+	if _, err := service.SubmitForUser("1", "SELECT id FROM input;", "user_a"); err != nil {
+		t.Fatalf("SubmitForUser user_a task 1 returned error: %v", err)
+	}
+	if _, err := service.SubmitForUser("1", "SELECT id FROM input WHERE id = '1';", "user_a"); err != nil {
+		t.Fatalf("second SubmitForUser user_a task 1 returned error: %v", err)
+	}
+	if _, err := service.SubmitForUser("2", "SELECT id FROM input;", "user_a"); err != nil {
+		t.Fatalf("SubmitForUser user_a task 2 returned error: %v", err)
+	}
+	if _, err := service.SubmitForUser("1", "SELECT id FROM input;", "user_b"); err != nil {
+		t.Fatalf("SubmitForUser user_b task 1 returned error: %v", err)
+	}
+
+	history, err := service.SubmissionsForUserTask("1", "user_a")
+	if err != nil {
+		t.Fatalf("SubmissionsForUserTask returned error: %v", err)
+	}
+	if len(history) != 2 {
+		t.Fatalf("history count = %d, want 2", len(history))
+	}
+	for _, submission := range history {
+		if submission.UserID != "user_a" || submission.TaskNumber != 1 {
+			t.Fatalf("history included unrelated submission: %#v", submission)
+		}
+	}
+}
+
+func TestTaskServiceCheckAllSolutions(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "001.json", `{
+		"number": 1,
+		"slug": "passing",
+		"title": "Passing",
+		"statement": "Passing task.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": []
+	}`)
+	writeTaskFile(t, taskDir, "002.json", `{
+		"number": 2,
+		"slug": "failing",
+		"title": "Failing",
+		"statement": "Failing task.",
+		"constraints": [],
+		"csv": "id\n2",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input WHERE id = 'missing';",
+		"expectedCsv": "id\n2\n",
+		"tests": []
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	service := newTestTaskService(t)
+
+	checks, err := service.CheckAllSolutions()
+	if err != nil {
+		t.Fatalf("CheckAllSolutions returned error: %v", err)
+	}
+	if len(checks) != 2 {
+		t.Fatalf("check count = %d, want 2", len(checks))
+	}
+	if !checks[0].Passed {
+		t.Fatalf("first check passed = false, want true: %#v", checks[0])
+	}
+	if checks[1].Passed {
+		t.Fatalf("second check passed = true, want false")
+	}
+}
+
 func TestTaskServiceSubmissionsReturnsEmptySlice(t *testing.T) {
 	service := newTestTaskService(t)
 

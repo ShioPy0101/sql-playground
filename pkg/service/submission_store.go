@@ -104,41 +104,31 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 	}
 	defer rows.Close()
 
-	submissions := []TaskSubmission{}
-	for rows.Next() {
-		var submission TaskSubmission
-		var casesJSON string
-		var submittedAt string
-		if err := rows.Scan(
-			&submission.ID,
-			&submission.UserID,
-			&submission.TaskNumber,
-			&submission.TaskSlug,
-			&submission.TaskTitle,
-			&submission.Query,
-			&submission.Passed,
-			&casesJSON,
-			&submittedAt,
-		); err != nil {
-			return nil, err
-		}
+	return scanSubmissions(rows)
+}
 
-		if err := json.Unmarshal([]byte(casesJSON), &submission.Cases); err != nil {
-			return nil, fmt.Errorf("invalid submission cases for id %d: %w", submission.ID, err)
-		}
-
-		parsedAt, err := time.Parse(time.RFC3339Nano, submittedAt)
-		if err != nil {
-			return nil, fmt.Errorf("invalid submission timestamp for id %d: %w", submission.ID, err)
-		}
-		submission.SubmittedAt = parsedAt
-		submissions = append(submissions, submission)
-	}
-	if err := rows.Err(); err != nil {
+func (s *SubmissionStore) ListByUserTask(userID string, taskNumber int) ([]TaskSubmission, error) {
+	rows, err := s.db.Query(s.rebind(`
+		SELECT
+			id,
+			user_id,
+			task_number,
+			task_slug,
+			task_title,
+			query,
+			passed,
+			cases_json,
+			submitted_at
+		FROM task_submissions
+		WHERE user_id = ? AND task_number = ?
+		ORDER BY submitted_at DESC, id DESC
+	`), userID, taskNumber)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return submissions, nil
+	return scanSubmissions(rows)
 }
 
 func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgress, error) {
@@ -191,6 +181,44 @@ func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgres
 	}
 
 	return progress, nil
+}
+
+func scanSubmissions(rows *sql.Rows) ([]TaskSubmission, error) {
+	submissions := []TaskSubmission{}
+	for rows.Next() {
+		var submission TaskSubmission
+		var casesJSON string
+		var submittedAt string
+		if err := rows.Scan(
+			&submission.ID,
+			&submission.UserID,
+			&submission.TaskNumber,
+			&submission.TaskSlug,
+			&submission.TaskTitle,
+			&submission.Query,
+			&submission.Passed,
+			&casesJSON,
+			&submittedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal([]byte(casesJSON), &submission.Cases); err != nil {
+			return nil, fmt.Errorf("invalid submission cases for id %d: %w", submission.ID, err)
+		}
+
+		parsedAt, err := time.Parse(time.RFC3339Nano, submittedAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid submission timestamp for id %d: %w", submission.ID, err)
+		}
+		submission.SubmittedAt = parsedAt
+		submissions = append(submissions, submission)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return submissions, nil
 }
 
 func (s *SubmissionStore) migrate() error {

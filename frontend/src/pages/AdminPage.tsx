@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchAdminSubmissions, TaskSubmission } from "../api/client";
+import { checkAdminSolutions, fetchAdminSubmissions, TaskSolutionCheck, TaskSubmission } from "../api/client";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
@@ -15,7 +15,10 @@ function shortUserID(userID: string) {
 export function AdminPage() {
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [error, setError] = useState("");
+  const [checkError, setCheckError] = useState("");
   const [selectedID, setSelectedID] = useState<number | null>(null);
+  const [solutionChecks, setSolutionChecks] = useState<TaskSolutionCheck[]>([]);
+  const [isCheckingSolutions, setIsCheckingSolutions] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -46,6 +49,21 @@ export function AdminPage() {
     [selectedID, submissions]
   );
 
+  async function handleCheckSolutions() {
+    setIsCheckingSolutions(true);
+    setCheckError("");
+
+    try {
+      const payload = await checkAdminSolutions();
+      setSolutionChecks(payload.checks ?? []);
+    } catch (err) {
+      setCheckError(err instanceof Error ? err.message : "想定解答のチェックに失敗しました");
+      setSolutionChecks([]);
+    } finally {
+      setIsCheckingSolutions(false);
+    }
+  }
+
   return (
     <main className="app-shell admin-shell">
       <header className="app-header">
@@ -53,12 +71,18 @@ export function AdminPage() {
           <p className="eyebrow">Admin</p>
           <h1>提出履歴</h1>
         </div>
-        <a className="secondary-link" href="/">
-          問題一覧へ
-        </a>
+        <div className="task-actions">
+          <button className="secondary-button" disabled={isCheckingSolutions} onClick={handleCheckSolutions}>
+            {isCheckingSolutions ? "チェック中..." : "想定解答を全件チェック"}
+          </button>
+          <a className="secondary-link" href="/">
+            問題一覧へ
+          </a>
+        </div>
       </header>
 
       {error ? <pre className="error-output inline">{error}</pre> : null}
+      {checkError ? <pre className="error-output inline">{checkError}</pre> : null}
 
       <section className="admin-summary" aria-label="提出サマリー">
         <div>
@@ -74,6 +98,49 @@ export function AdminPage() {
           <strong>{submissions.filter((submission) => submission.passed).length}</strong>
         </div>
       </section>
+
+      {solutionChecks.length > 0 ? (
+        <section className="solution-check-panel" aria-label="想定解答チェック結果">
+          <div className="panel-heading">
+            <h2>想定解答チェック</h2>
+            <span>
+              {solutionChecks.filter((check) => check.passed).length} / {solutionChecks.length} 正解
+            </span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>問題</th>
+                  <th>結果</th>
+                  <th>ケース</th>
+                  <th>エラー</th>
+                </tr>
+              </thead>
+              <tbody>
+                {solutionChecks.map((check) => (
+                  <tr key={check.taskNumber}>
+                    <td>
+                      #{check.taskNumber} {check.taskTitle}
+                    </td>
+                    <td>
+                      <span className={check.passed ? "badge accepted" : "badge failed"}>
+                        {check.passed ? "正解" : "要確認"}
+                      </span>
+                    </td>
+                    <td>
+                      {check.cases?.length
+                        ? `${check.cases.filter((testCase) => testCase.passed).length} / ${check.cases.length}`
+                        : "-"}
+                    </td>
+                    <td>{check.error || check.cases?.find((testCase) => testCase.error)?.error || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {submissions.length === 0 && !error ? (
         <div className="empty-state page">

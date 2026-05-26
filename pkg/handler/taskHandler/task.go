@@ -86,6 +86,26 @@ func (h *TaskHandler) Submit(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+func (h *TaskHandler) History(c echo.Context) error {
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to identify user",
+		})
+	}
+
+	submissions, err := h.service.SubmissionsForUserTask(c.Param("number"), userID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string][]service.TaskSubmission{
+		"submissions": submissions,
+	})
+}
+
 func (h *TaskHandler) CurrentUser(c echo.Context) error {
 	userID, err := ensureUserID(c)
 	if err != nil {
@@ -111,6 +131,23 @@ func (h *TaskHandler) AdminSubmissions(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string][]service.TaskSubmission{
 		"submissions": submissions,
+	})
+}
+
+func (h *TaskHandler) AdminCheckSolutions(c echo.Context) error {
+	if !httpapi.RequireAdminBasicAuth(c.Response().Writer, c.Request()) {
+		return nil
+	}
+
+	checks, err := h.service.CheckAllSolutions()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "failed to check solutions",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string][]service.TaskSolutionCheck{
+		"checks": checks,
 	})
 }
 

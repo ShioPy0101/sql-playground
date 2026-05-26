@@ -1,0 +1,32 @@
+{
+  "number": 33,
+  "slug": "performance-tuning-avoid-n-plus-one-counts",
+  "title": "[パフォーマンスチューニング][確認しよう] N+1をJOINとGROUP BYで避ける",
+  "statement": "customers と orders から、顧客ごとの注文数と合計金額を表示してください。出力する列は customer_name, order_count, total_amount です。注文がない顧客も order_count = 0, total_amount = 0 として表示します。customer_name の昇順で並べます。\n\nN+1問題とは、最初にN件の親データを取得したあと、その1件ごとに追加SQLを実行してしまう問題です。たとえば顧客一覧を1回で取得し、各顧客の注文数を顧客ごとに別SQLで数えると、顧客が100人なら 1 + 100 回のSQLになります。データが増えるほどDBへの往復が増え、遅くなりやすい典型例です。\n\nSQLでは、JOIN と GROUP BY を使うと「顧客一覧」と「注文集計」を1回のクエリでまとめて取得できます。この問題は確認用です。",
+  "constraints": [
+    {
+      "name": "N+1回避",
+      "value": "顧客ごとに個別SQLを発行する代わりに、1つの集計クエリで求めます"
+    },
+    {
+      "name": "注文なし",
+      "value": "LEFT JOIN と COALESCE で注文がない顧客も0として表示します"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,1,800\n103,2,1500\n104,4,700\n105,4,300",
+  "starterSql": "SELECT\n  customers.name AS customer_name,\n  COUNT(orders.id) AS order_count,\n  COALESCE(SUM(CAST(orders.total AS INTEGER)), 0) AS total_amount\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY customers.name ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  COUNT(orders.id) AS order_count,\n  COALESCE(SUM(CAST(orders.total AS INTEGER)), 0) AS total_amount\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nGROUP BY customers.id, customers.name\nORDER BY customers.name ASC;",
+  "expectedCsv": "customer_name,order_count,total_amount\nAoi,2,2000\nMio,0,0\nRen,1,1500\nSora,2,1000\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,1,800\n103,2,1500\n104,4,700\n105,4,300",
+      "expectedCsv": "customer_name,order_count,total_amount\nAoi,2,2000\nMio,0,0\nRen,1,1500\nSora,2,1000\n"
+    },
+    {
+      "name": "全員注文なしを含む",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id,total\n201,1,500",
+      "expectedCsv": "customer_name,order_count,total_amount\nKai,0,0\nYui,1,500\n"
+    }
+  ]
+}

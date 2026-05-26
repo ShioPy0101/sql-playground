@@ -1,0 +1,32 @@
+{
+  "number": 36,
+  "slug": "performance-tuning-filter-before-join",
+  "title": "[パフォーマンスチューニング][書いてみよう] JOINする前に対象をしぼる",
+  "statement": "customers と orders から、2026-05-01 以降の paid 注文のうち total が 1000 以上のものを表示してください。出力する列は order_id, customer_name, total です。total が大きい順、order_id の昇順で並べます。\n\nJOINの前に注文をしぼれるなら、先にしぼるとJOIN対象の行数を減らせます。実際のDBでは status, ordered_at, total などに合うインデックスがあると、不要な注文行を早い段階で読み飛ばせます。SQLを書くときも「どの表をどこまで小さくしてからJOINできるか」を意識しましょう。",
+  "constraints": [
+    {
+      "name": "先にしぼる",
+      "value": "orders から paid、日付、金額の条件に合う行だけを対象にします"
+    },
+    {
+      "name": "JOIN",
+      "value": "しぼった注文を customers とJOINして顧客名を表示します"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,status,ordered_at,total\n101,1,paid,2026-05-01,1200\n102,1,paid,2026-04-30,5000\n103,2,pending,2026-05-03,3000\n104,2,paid,2026-05-04,800\n105,3,paid,2026-05-05,2500",
+  "starterSql": "WITH filtered_orders AS (\n  SELECT\n    id,\n    customer_id,\n    CAST(total AS INTEGER) AS total\n  FROM orders\n  WHERE status = 'paid'\n    -- 日付と金額の条件を追加します\n)\nSELECT\n  filtered_orders.id AS order_id,\n  customers.name AS customer_name,\n  filtered_orders.total\nFROM filtered_orders\nJOIN customers\n  ON customers.id = filtered_orders.customer_id\nORDER BY filtered_orders.total DESC, filtered_orders.id ASC;",
+  "solutionSql": "WITH filtered_orders AS (\n  SELECT\n    id,\n    customer_id,\n    CAST(total AS INTEGER) AS total\n  FROM orders\n  WHERE status = 'paid'\n    AND ordered_at >= '2026-05-01'\n    AND CAST(total AS INTEGER) >= 1000\n)\nSELECT\n  filtered_orders.id AS order_id,\n  customers.name AS customer_name,\n  filtered_orders.total\nFROM filtered_orders\nJOIN customers\n  ON customers.id = filtered_orders.customer_id\nORDER BY filtered_orders.total DESC, filtered_orders.id ASC;",
+  "expectedCsv": "order_id,customer_name,total\n105,Mio,2500\n101,Aoi,1200\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,status,ordered_at,total\n101,1,paid,2026-05-01,1200\n102,1,paid,2026-04-30,5000\n103,2,pending,2026-05-03,3000\n104,2,paid,2026-05-04,800\n105,3,paid,2026-05-05,2500",
+      "expectedCsv": "order_id,customer_name,total\n105,Mio,2500\n101,Aoi,1200\n"
+    },
+    {
+      "name": "境界値を含む",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id,status,ordered_at,total\n1,1,paid,2026-05-01,1000\n2,1,paid,2026-05-02,999\n3,2,paid,2026-05-03,1001",
+      "expectedCsv": "order_id,customer_name,total\n3,Kai,1001\n1,Yui,1000\n"
+    }
+  ]
+}

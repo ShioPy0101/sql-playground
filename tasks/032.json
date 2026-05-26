@@ -1,0 +1,32 @@
+{
+  "number": 32,
+  "slug": "performance-tuning-filter-and-project",
+  "title": "[パフォーマンスチューニング][確認しよう] 必要な行と列だけ取り出す",
+  "statement": "orders テーブルから、2026-05-01 以降の paid 注文だけを表示してください。出力する列は id, customer_name, total です。total が大きい順、id の昇順で並べます。\n\nパフォーマンスチューニングとは、同じ結果をより少ない時間、少ないメモリ、少ない読み取り量で返せるようにSQLやテーブル設計を見直すことです。最初の基本は「必要な行だけ WHERE でしぼる」「必要な列だけ SELECT する」です。SELECT * で広い表を読むと、使わない列までアプリに返すことになり、データ量が増えるほど無駄が大きくなります。\n\nこの問題は確認用です。用意されているSQLを実行して、しぼり込みと列選択の形を確認しましょう。",
+  "constraints": [
+    {
+      "name": "行のしぼり込み",
+      "value": "status = 'paid' かつ ordered_at >= '2026-05-01' の注文だけを対象にします"
+    },
+    {
+      "name": "列のしぼり込み",
+      "value": "必要な id, customer_name, total だけを出力します"
+    }
+  ],
+  "csv": "[orders]\nid,customer_name,status,ordered_at,total,memo\n1,Aoi,paid,2026-05-03,1200,first\n2,Ren,canceled,2026-05-04,3000,cancel\n3,Mio,paid,2026-04-28,900,old\n4,Sora,paid,2026-05-02,2500,gift\n5,Yui,paid,2026-05-10,2500,repeat",
+  "starterSql": "SELECT\n  id,\n  customer_name,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE status = 'paid'\n  AND ordered_at >= '2026-05-01'\nORDER BY total DESC, id ASC;",
+  "solutionSql": "SELECT\n  id,\n  customer_name,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE status = 'paid'\n  AND ordered_at >= '2026-05-01'\nORDER BY total DESC, id ASC;",
+  "expectedCsv": "id,customer_name,total\n4,Sora,2500\n5,Yui,2500\n1,Aoi,1200\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[orders]\nid,customer_name,status,ordered_at,total,memo\n1,Aoi,paid,2026-05-03,1200,first\n2,Ren,canceled,2026-05-04,3000,cancel\n3,Mio,paid,2026-04-28,900,old\n4,Sora,paid,2026-05-02,2500,gift\n5,Yui,paid,2026-05-10,2500,repeat",
+      "expectedCsv": "id,customer_name,total\n4,Sora,2500\n5,Yui,2500\n1,Aoi,1200\n"
+    },
+    {
+      "name": "同じ金額はid順",
+      "csv": "[orders]\nid,customer_name,status,ordered_at,total,memo\n10,Kai,paid,2026-05-01,800,x\n11,Haru,paid,2026-05-02,1200,y\n12,Rin,paid,2026-05-02,1200,z\n13,Ema,pending,2026-05-03,5000,w",
+      "expectedCsv": "id,customer_name,total\n11,Haru,1200\n12,Rin,1200\n10,Kai,800\n"
+    }
+  ]
+}

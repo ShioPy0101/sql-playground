@@ -1,0 +1,32 @@
+{
+  "number": 37,
+  "slug": "performance-tuning-exists-for-membership",
+  "title": "[パフォーマンスチューニング][確認しよう] 存在確認にはEXISTSを使う",
+  "statement": "customers, orders, order_items, products から、food カテゴリの商品を購入したことがある顧客を表示してください。出力する列は customer_name です。重複は出さず、customer_name の昇順で並べます。\n\n「条件に合う関連データが1件でもあるか」を知りたいだけなら、JOINで明細行を全部広げるより EXISTS が向いていることがあります。EXISTS は条件に合う行が見つかった時点で真にできるため、重複を DISTINCT で消す必要もありません。\n\nこの問題は確認用です。購入明細を一覧化するのではなく、顧客ごとの存在確認として読んでみましょう。",
+  "constraints": [
+    {
+      "name": "存在確認",
+      "value": "food 商品を購入した注文明細が1件でもある顧客を表示します"
+    },
+    {
+      "name": "重複なし",
+      "value": "同じ顧客が複数回購入していても1行だけ表示します"
+    }
+  ],
+  "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id\n101,1\n102,1\n103,2\n104,4\n\n[order_items]\nid,order_id,product_id\n1001,101,1\n1002,101,2\n1003,102,1\n1004,103,3\n1005,104,2\n\n[products]\nid,name,category\n1,coffee,food\n2,notebook,stationery\n3,tea,food",
+  "starterSql": "SELECT\n  customers.name AS customer_name\nFROM customers\nWHERE EXISTS (\n  SELECT 1\n  FROM orders\n  JOIN order_items\n    ON order_items.order_id = orders.id\n  JOIN products\n    ON products.id = order_items.product_id\n  WHERE orders.customer_id = customers.id\n    AND products.category = 'food'\n)\nORDER BY customers.name ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name\nFROM customers\nWHERE EXISTS (\n  SELECT 1\n  FROM orders\n  JOIN order_items\n    ON order_items.order_id = orders.id\n  JOIN products\n    ON products.id = order_items.product_id\n  WHERE orders.customer_id = customers.id\n    AND products.category = 'food'\n)\nORDER BY customers.name ASC;",
+  "expectedCsv": "customer_name\nAoi\nRen\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n4,Sora\n\n[orders]\nid,customer_id\n101,1\n102,1\n103,2\n104,4\n\n[order_items]\nid,order_id,product_id\n1001,101,1\n1002,101,2\n1003,102,1\n1004,103,3\n1005,104,2\n\n[products]\nid,name,category\n1,coffee,food\n2,notebook,stationery\n3,tea,food",
+      "expectedCsv": "customer_name\nAoi\nRen\n"
+    },
+    {
+      "name": "複数購入しても1行",
+      "csv": "[customers]\nid,name\n1,Yui\n2,Kai\n\n[orders]\nid,customer_id\n1,1\n2,1\n3,2\n\n[order_items]\nid,order_id,product_id\n1,1,1\n2,2,1\n3,3,2\n\n[products]\nid,name,category\n1,bread,food\n2,pen,stationery",
+      "expectedCsv": "customer_name\nYui\n"
+    }
+  ]
+}

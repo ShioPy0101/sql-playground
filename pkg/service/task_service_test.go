@@ -117,6 +117,34 @@ func TestTaskServiceSubmitTreatsEquivalentNumbersAsEqual(t *testing.T) {
 	}
 }
 
+func TestTaskServiceSubmitChecksDDLSchema(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "011.json", `{
+		"number": 11,
+		"title": "Create users table",
+		"statement": "Create a users table.",
+		"constraints": [],
+		"csv": "",
+		"starterSql": "CREATE TABLE users ();",
+		"solutionSql": "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+		"checkSql": "SELECT name, type, \"notnull\", pk FROM pragma_table_info('users') ORDER BY cid;",
+		"expectedCsv": "name,type,notnull,pk\nid,INTEGER,0,1\nname,TEXT,1,0\n",
+		"tests": []
+	}`)
+
+	t.Setenv("TASKS_DIR", taskDir)
+	service := newTestTaskService(t)
+
+	result, err := service.Submit("11", "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);")
+	if err != nil {
+		t.Fatalf("Submit returned error: %v", err)
+	}
+
+	if !result.Passed {
+		t.Fatalf("Submit() passed = false, want true: %#v", result)
+	}
+}
+
 func TestTaskServiceSubmitForUserRecordsSubmission(t *testing.T) {
 	taskDir := t.TempDir()
 	writeTaskFile(t, taskDir, "010.json", `{
@@ -436,6 +464,25 @@ func TestTaskServiceNewAdvancedTaskSolutionsPass(t *testing.T) {
 	service := newTestTaskService(t)
 
 	for number := 22; number <= 31; number++ {
+		task, err := service.LoadTask(fmt.Sprintf("%03d", number))
+		if err != nil {
+			t.Fatalf("LoadTask(%03d) returned error: %v", number, err)
+		}
+
+		result, err := service.Submit(fmt.Sprintf("%03d", number), task.SolutionSQL)
+		if err != nil {
+			t.Fatalf("Submit(%03d) returned error: %v", number, err)
+		}
+		if !result.Passed {
+			t.Fatalf("solution for task %03d did not pass: %#v", number, result)
+		}
+	}
+}
+
+func TestTaskServiceTableDesignTaskSolutionsPass(t *testing.T) {
+	service := newTestTaskService(t)
+
+	for number := 42; number <= 44; number++ {
 		task, err := service.LoadTask(fmt.Sprintf("%03d", number))
 		if err != nil {
 			t.Fatalf("LoadTask(%03d) returned error: %v", number, err)

@@ -155,7 +155,7 @@ export function TaskPage({ number }: TaskPageProps) {
     setError("");
 
     try {
-      const payload = await executeSQL(task.csv, query);
+      const payload = await executeSQL(task.csv, query, task.checkSql);
       setResult(payload.csv);
     } catch (err) {
       setError(err instanceof Error ? err.message : "SQL の実行に失敗しました");

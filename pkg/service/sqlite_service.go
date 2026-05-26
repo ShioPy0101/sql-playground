@@ -25,3 +25,23 @@ func (s *SQLiteService) Execute(csvText string, query string) (string, error) {
 
 	return helper.ExecuteStatements(db, helper.SplitSQLStatements(query))
 }
+
+// ExecuteAndInspect runs SQL, then returns the result of an inspection query on the same database.
+func (s *SQLiteService) ExecuteAndInspect(csvText string, query string, inspectionQuery string) (string, error) {
+	db, cleanup, err := helper.OpenTempSQLiteDB()
+	if err != nil {
+		return "", err
+	}
+	defer cleanup()
+	defer db.Close()
+
+	if err := helper.CreateInputTables(db, csvText); err != nil {
+		return "", err
+	}
+
+	if _, err := helper.ExecuteStatements(db, helper.SplitSQLStatements(query)); err != nil {
+		return "", err
+	}
+
+	return helper.ExecuteStatements(db, helper.SplitSQLStatements(inspectionQuery))
+}

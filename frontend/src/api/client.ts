@@ -16,6 +16,7 @@ export type Task = {
   csv: string;
   starterSql: string;
   solutionSql: string;
+  checkSql: string;
   expectedCsv: string;
   testCount: number;
   savedQuery?: string;
@@ -88,8 +89,8 @@ export type AdminSolutionChecksResponse = {
   checks: TaskSolutionCheck[];
 };
 
-export async function executeSQL(csv: string, query: string) {
-  return postJSON<ExecuteResponse>("/api/sqlite/execute", { csv, query });
+export async function executeSQL(csv: string, query: string, checkSql = "") {
+  return postJSON<ExecuteResponse>("/api/sqlite/execute", { csv, query, checkSql });
 }
 
 export async function fetchCurrentUser() {

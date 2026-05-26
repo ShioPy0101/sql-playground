@@ -1,0 +1,32 @@
+{
+  "number": 43,
+  "slug": "table-design-create-orders",
+  "title": "[テーブル設計][書いてみよう] orders テーブルを作成する",
+  "statement": "注文を保存する orders テーブルを CREATE TABLE で作成してください。\n\n必要な列は id, customer_id, ordered_at, status, total です。id は INTEGER PRIMARY KEY、customer_id は顧客を参照するための整数、ordered_at と status は文字列、total は整数です。注文として成立するために customer_id, ordered_at, status, total はすべて NOT NULL にしてください。\n\nテーブル設計では「あとから必ず必要になる値」を NOT NULL にしておくと、欠けたデータが入りにくくなります。",
+  "constraints": [
+    {
+      "name": "列",
+      "value": "id, customer_id, ordered_at, status, total の5列をこの順番で作ります"
+    },
+    {
+      "name": "型",
+      "value": "id, customer_id, total は INTEGER、ordered_at と status は TEXT にします"
+    },
+    {
+      "name": "必須",
+      "value": "customer_id, ordered_at, status, total は NOT NULL にします"
+    }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE orders (\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT,\n  status TEXT,\n  total INTEGER\n);",
+  "solutionSql": "CREATE TABLE orders (\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  status TEXT NOT NULL,\n  total INTEGER NOT NULL\n);",
+  "checkSql": "SELECT name AS column_name, UPPER(type) AS type, \"notnull\" AS not_null, pk FROM pragma_table_info('orders') ORDER BY cid;",
+  "expectedCsv": "column_name,type,not_null,pk\nid,INTEGER,0,1\ncustomer_id,INTEGER,1,0\nordered_at,TEXT,1,0\nstatus,TEXT,1,0\ntotal,INTEGER,1,0\n",
+  "tests": [
+    {
+      "name": "スキーマ確認",
+      "csv": "",
+      "expectedCsv": "column_name,type,not_null,pk\nid,INTEGER,0,1\ncustomer_id,INTEGER,1,0\nordered_at,TEXT,1,0\nstatus,TEXT,1,0\ntotal,INTEGER,1,0\n"
+    }
+  ]
+}

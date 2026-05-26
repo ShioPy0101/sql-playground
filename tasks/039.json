@@ -1,0 +1,32 @@
+{
+  "number": 39,
+  "slug": "performance-tuning-keyset-pagination",
+  "title": "[パフォーマンスチューニング][確認しよう] OFFSETではなくキーセットページングを使う",
+  "statement": "orders テーブルから、ordered_at DESC, id DESC の並びで、カーソルより後の3件を表示してください。カーソルは ordered_at = '2026-05-05', id = 105 です。出力する列は id, ordered_at, total です。\n\nOFFSET はページ番号が深くなるほど、読み飛ばす行が増えて遅くなりやすい方法です。キーセットページングは「最後に見た ordered_at と id より後」を条件にして次のページを取る方法です。並び順に使う列へインデックスを用意しやすく、深いページでも安定しやすいのが利点です。\n\nこの問題は確認用です。",
+  "constraints": [
+    {
+      "name": "並び順",
+      "value": "ordered_at DESC, id DESC で並べます"
+    },
+    {
+      "name": "カーソル条件",
+      "value": "ordered_at がカーソルより古い、または同じ ordered_at で id が小さい行を次ページとして扱います"
+    }
+  ],
+  "csv": "[orders]\nid,ordered_at,total\n101,2026-05-08,3000\n102,2026-05-07,1200\n103,2026-05-06,900\n104,2026-05-05,1800\n105,2026-05-05,1600\n106,2026-05-04,2200\n107,2026-05-03,700\n108,2026-05-02,500",
+  "starterSql": "SELECT\n  id,\n  ordered_at,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE ordered_at < '2026-05-05'\n   OR (ordered_at = '2026-05-05' AND CAST(id AS INTEGER) < 105)\nORDER BY ordered_at DESC, CAST(id AS INTEGER) DESC\nLIMIT 3;",
+  "solutionSql": "SELECT\n  id,\n  ordered_at,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE ordered_at < '2026-05-05'\n   OR (ordered_at = '2026-05-05' AND CAST(id AS INTEGER) < 105)\nORDER BY ordered_at DESC, CAST(id AS INTEGER) DESC\nLIMIT 3;",
+  "expectedCsv": "id,ordered_at,total\n104,2026-05-05,1800\n106,2026-05-04,2200\n107,2026-05-03,700\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[orders]\nid,ordered_at,total\n101,2026-05-08,3000\n102,2026-05-07,1200\n103,2026-05-06,900\n104,2026-05-05,1800\n105,2026-05-05,1600\n106,2026-05-04,2200\n107,2026-05-03,700\n108,2026-05-02,500",
+      "expectedCsv": "id,ordered_at,total\n104,2026-05-05,1800\n106,2026-05-04,2200\n107,2026-05-03,700\n"
+    },
+    {
+      "name": "同日が複数ある",
+      "csv": "[orders]\nid,ordered_at,total\n110,2026-05-05,10\n109,2026-05-05,20\n106,2026-05-05,30\n104,2026-05-05,40\n103,2026-05-04,50\n102,2026-05-03,60",
+      "expectedCsv": "id,ordered_at,total\n104,2026-05-05,40\n103,2026-05-04,50\n102,2026-05-03,60\n"
+    }
+  ]
+}

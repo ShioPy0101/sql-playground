@@ -13,6 +13,10 @@ type csvTable struct {
 
 // CreateInputTables supports a single default input table or multiple marked tables.
 func CreateInputTables(db *sql.DB, csvText string) error {
+	if strings.TrimSpace(csvText) == "" {
+		return nil
+	}
+
 	tables, err := parseCSVTables(csvText)
 	if err != nil {
 		return err

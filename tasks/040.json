@@ -1,0 +1,32 @@
+{
+  "number": 40,
+  "slug": "performance-tuning-sargable-date-range",
+  "title": "[パフォーマンスチューニング][書いてみよう] 日付列を加工せず範囲でしぼる",
+  "statement": "events テーブルから、2026年5月の login イベント数をユーザーごとに集計してください。出力する列は user_id, login_count です。login_count が多い順、user_id の昇順で並べます。\n\nWHERE substr(event_at, 1, 7) = '2026-05' のように列を関数で加工すると、DBは event_at のインデックスを使いにくくなることがあります。日付や日時は event_at >= '2026-05-01' AND event_at < '2026-06-01' のような半開区間で書くと、範囲検索として扱いやすくなります。このようにインデックスを使いやすい条件は sargable と呼ばれます。",
+  "constraints": [
+    {
+      "name": "日付範囲",
+      "value": "event_at >= '2026-05-01' かつ event_at < '2026-06-01' で5月を表します"
+    },
+    {
+      "name": "イベント種別",
+      "value": "event_type = 'login' だけを数えます"
+    }
+  ],
+  "csv": "[events]\nid,user_id,event_type,event_at\n1,1,login,2026-05-01 09:00:00\n2,1,view,2026-05-01 09:05:00\n3,1,login,2026-05-31 23:59:00\n4,2,login,2026-05-15 12:00:00\n5,2,login,2026-06-01 00:00:00\n6,3,login,2026-04-30 23:59:00\n7,3,login,2026-05-20 08:00:00",
+  "starterSql": "SELECT\n  user_id,\n  COUNT(*) AS login_count\nFROM events\nWHERE event_type = 'login'\n  -- event_at を加工せず、5月の範囲条件を書きます\nGROUP BY user_id\nORDER BY login_count DESC, CAST(user_id AS INTEGER) ASC;",
+  "solutionSql": "SELECT\n  user_id,\n  COUNT(*) AS login_count\nFROM events\nWHERE event_type = 'login'\n  AND event_at >= '2026-05-01'\n  AND event_at < '2026-06-01'\nGROUP BY user_id\nORDER BY login_count DESC, CAST(user_id AS INTEGER) ASC;",
+  "expectedCsv": "user_id,login_count\n1,2\n2,1\n3,1\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[events]\nid,user_id,event_type,event_at\n1,1,login,2026-05-01 09:00:00\n2,1,view,2026-05-01 09:05:00\n3,1,login,2026-05-31 23:59:00\n4,2,login,2026-05-15 12:00:00\n5,2,login,2026-06-01 00:00:00\n6,3,login,2026-04-30 23:59:00\n7,3,login,2026-05-20 08:00:00",
+      "expectedCsv": "user_id,login_count\n1,2\n2,1\n3,1\n"
+    },
+    {
+      "name": "6月1日は含めない",
+      "csv": "[events]\nid,user_id,event_type,event_at\n1,10,login,2026-05-31 23:59:59\n2,10,login,2026-06-01 00:00:00\n3,11,login,2026-05-10 00:00:00\n4,11,logout,2026-05-10 00:05:00",
+      "expectedCsv": "user_id,login_count\n10,1\n11,1\n"
+    }
+  ]
+}

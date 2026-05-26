@@ -1,0 +1,32 @@
+{
+  "number": 35,
+  "slug": "performance-tuning-pre-aggregate-before-join",
+  "title": "[パフォーマンスチューニング][確認しよう] JOIN前に集計して行数を減らす",
+  "statement": "products と order_items から、商品ごとの売上数量を表示してください。出力する列は product_name, sold_quantity です。売上がない商品は sold_quantity = 0 として表示します。sold_quantity が大きい順、product_name の昇順で並べます。\n\n明細テーブルは行数が大きくなりやすいので、いきなり多くのテーブルとJOINすると中間結果が大きくなります。先に order_items を product_id ごとに集計してから products とJOINすると、JOINする行数を減らせます。これは集計レポートでよく使うチューニングの考え方です。\n\nこの問題は確認用です。CTEで事前集計する形を見てみましょう。",
+  "constraints": [
+    {
+      "name": "事前集計",
+      "value": "order_items を product_id ごとに集計してから products とJOINします"
+    },
+    {
+      "name": "売上なし",
+      "value": "売上がない商品も0として表示します"
+    }
+  ],
+  "csv": "[products]\nid,name\n1,notebook\n2,pen\n3,mug\n4,towel\n\n[order_items]\nid,product_id,quantity\n101,1,2\n102,1,3\n103,2,10\n104,4,1",
+  "starterSql": "WITH item_totals AS (\n  SELECT\n    product_id,\n    SUM(CAST(quantity AS INTEGER)) AS sold_quantity\n  FROM order_items\n  GROUP BY product_id\n)\nSELECT\n  products.name AS product_name,\n  COALESCE(item_totals.sold_quantity, 0) AS sold_quantity\nFROM products\nLEFT JOIN item_totals\n  ON item_totals.product_id = products.id\nORDER BY sold_quantity DESC, products.name ASC;",
+  "solutionSql": "WITH item_totals AS (\n  SELECT\n    product_id,\n    SUM(CAST(quantity AS INTEGER)) AS sold_quantity\n  FROM order_items\n  GROUP BY product_id\n)\nSELECT\n  products.name AS product_name,\n  COALESCE(item_totals.sold_quantity, 0) AS sold_quantity\nFROM products\nLEFT JOIN item_totals\n  ON item_totals.product_id = products.id\nORDER BY sold_quantity DESC, products.name ASC;",
+  "expectedCsv": "product_name,sold_quantity\npen,10\nnotebook,5\ntowel,1\nmug,0\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name\n1,notebook\n2,pen\n3,mug\n4,towel\n\n[order_items]\nid,product_id,quantity\n101,1,2\n102,1,3\n103,2,10\n104,4,1",
+      "expectedCsv": "product_name,sold_quantity\npen,10\nnotebook,5\ntowel,1\nmug,0\n"
+    },
+    {
+      "name": "同数は商品名順",
+      "csv": "[products]\nid,name\n1,A\n2,B\n3,C\n\n[order_items]\nid,product_id,quantity\n1,1,2\n2,2,2",
+      "expectedCsv": "product_name,sold_quantity\nA,2\nB,2\nC,0\n"
+    }
+  ]
+}

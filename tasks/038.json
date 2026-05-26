@@ -1,0 +1,32 @@
+{
+  "number": 38,
+  "slug": "performance-tuning-not-exists-anti-join",
+  "title": "[パフォーマンスチューニング][書いてみよう] NOT EXISTSで未使用データを探す",
+  "statement": "products と order_items から、一度も注文されていない商品を表示してください。出力する列は product_name, category です。category の昇順、product_name の昇順で並べます。\n\n「関連する行が存在しないもの」を探すときは NOT EXISTS が読みやすく、インデックスがあるDBでは効率よく判定しやすい書き方です。LEFT JOIN して NULL を探す方法もありますが、ここでは「注文明細が存在しない」という意図をそのままSQLにします。",
+  "constraints": [
+    {
+      "name": "未注文",
+      "value": "order_items に同じ product_id が1件もない商品だけを表示します"
+    },
+    {
+      "name": "存在しないことの確認",
+      "value": "NOT EXISTS を使って関連行がないことを判定します"
+    }
+  ],
+  "csv": "[products]\nid,name,category\n1,notebook,stationery\n2,pen,stationery\n3,mug,home\n4,towel,home\n5,coffee,food\n\n[order_items]\nid,product_id,quantity\n101,1,2\n102,2,5\n103,5,1",
+  "starterSql": "SELECT\n  products.name AS product_name,\n  products.category\nFROM products\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM order_items\n  WHERE order_items.product_id = products.id\n)\nORDER BY products.category ASC, products.name ASC;",
+  "solutionSql": "SELECT\n  products.name AS product_name,\n  products.category\nFROM products\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM order_items\n  WHERE order_items.product_id = products.id\n)\nORDER BY products.category ASC, products.name ASC;",
+  "expectedCsv": "product_name,category\nmug,home\ntowel,home\n",
+  "tests": [
+    {
+      "name": "サンプル",
+      "csv": "[products]\nid,name,category\n1,notebook,stationery\n2,pen,stationery\n3,mug,home\n4,towel,home\n5,coffee,food\n\n[order_items]\nid,product_id,quantity\n101,1,2\n102,2,5\n103,5,1",
+      "expectedCsv": "product_name,category\nmug,home\ntowel,home\n"
+    },
+    {
+      "name": "未注文がない場合",
+      "csv": "[products]\nid,name,category\n1,A,alpha\n2,B,beta\n\n[order_items]\nid,product_id,quantity\n1,1,1\n2,2,1",
+      "expectedCsv": "product_name,category\n"
+    }
+  ]
+}

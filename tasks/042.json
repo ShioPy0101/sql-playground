@@ -1,0 +1,32 @@
+{
+  "number": 42,
+  "slug": "table-design-create-customers",
+  "title": "[テーブル設計][確認しよう] customers テーブルを作成する",
+  "statement": "顧客を保存する customers テーブルを CREATE TABLE で作成してください。\n\n必要な列は id, name, email, created_at です。id は INTEGER PRIMARY KEY、name と created_at は必須なので NOT NULL を付けます。email は未登録の顧客もいるため NULL を許可します。\n\nCREATE TABLE は、データを入れる前に「どんな列を持つ表なのか」を決める命令です。列名、データ型、必須かどうか、主キーをまとめて定義します。",
+  "constraints": [
+    {
+      "name": "主キー",
+      "value": "id は INTEGER PRIMARY KEY にします"
+    },
+    {
+      "name": "必須列",
+      "value": "name と created_at は TEXT NOT NULL にします"
+    },
+    {
+      "name": "任意列",
+      "value": "email は TEXT として、NOT NULL は付けません"
+    }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE customers (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT,\n  created_at TEXT NOT NULL\n);",
+  "solutionSql": "CREATE TABLE customers (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT,\n  created_at TEXT NOT NULL\n);",
+  "checkSql": "SELECT name AS column_name, UPPER(type) AS type, \"notnull\" AS not_null, pk FROM pragma_table_info('customers') ORDER BY cid;",
+  "expectedCsv": "column_name,type,not_null,pk\nid,INTEGER,0,1\nname,TEXT,1,0\nemail,TEXT,0,0\ncreated_at,TEXT,1,0\n",
+  "tests": [
+    {
+      "name": "スキーマ確認",
+      "csv": "",
+      "expectedCsv": "column_name,type,not_null,pk\nid,INTEGER,0,1\nname,TEXT,1,0\nemail,TEXT,0,0\ncreated_at,TEXT,1,0\n"
+    }
+  ]
+}

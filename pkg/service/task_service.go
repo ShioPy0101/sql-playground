@@ -24,6 +24,7 @@ type Constraint struct {
 type TaskTestCase struct {
 	Name        string `json:"name"`
 	CSV         string `json:"csv"`
+	CheckSQL    string `json:"checkSql"`
 	ExpectedCSV string `json:"expectedCsv"`
 }
 
@@ -36,6 +37,7 @@ type Task struct {
 	CSV         string         `json:"csv"`
 	StarterSQL  string         `json:"starterSql"`
 	SolutionSQL string         `json:"solutionSql"`
+	CheckSQL    string         `json:"checkSql"`
 	ExpectedCSV string         `json:"expectedCsv"`
 	Tests       []TaskTestCase `json:"tests"`
 }
@@ -49,6 +51,7 @@ type PublicTask struct {
 	CSV         string       `json:"csv"`
 	StarterSQL  string       `json:"starterSql"`
 	SolutionSQL string       `json:"solutionSql"`
+	CheckSQL    string       `json:"checkSql"`
 	ExpectedCSV string       `json:"expectedCsv"`
 	TestCount   int          `json:"testCount"`
 	SavedQuery  string       `json:"savedQuery,omitempty"`
@@ -302,7 +305,7 @@ func (s *TaskService) checkTask(task Task, query string) TaskSubmitResult {
 
 	result := TaskSubmitResult{Passed: true, Cases: make([]TaskCaseResult, 0, len(tests))}
 	for _, test := range tests {
-		actualCSV, err := s.sqliteService.Execute(test.CSV, query)
+		actualCSV, err := s.executeTaskCase(task, test, query)
 		caseResult := TaskCaseResult{
 			Name:        test.Name,
 			ExpectedCSV: test.ExpectedCSV,
@@ -323,6 +326,18 @@ func (s *TaskService) checkTask(task Task, query string) TaskSubmitResult {
 	}
 
 	return result
+}
+
+func (s *TaskService) executeTaskCase(task Task, test TaskTestCase, query string) (string, error) {
+	checkSQL := strings.TrimSpace(test.CheckSQL)
+	if checkSQL == "" {
+		checkSQL = task.CheckSQL
+	}
+	if strings.TrimSpace(checkSQL) == "" {
+		return s.sqliteService.Execute(test.CSV, query)
+	}
+
+	return s.sqliteService.ExecuteAndInspect(test.CSV, query, checkSQL)
 }
 
 func (s *TaskService) LoadTask(number string) (Task, error) {
@@ -397,6 +412,7 @@ func publicTask(task Task) PublicTask {
 		CSV:         task.CSV,
 		StarterSQL:  task.StarterSQL,
 		SolutionSQL: task.SolutionSQL,
+		CheckSQL:    task.CheckSQL,
 		ExpectedCSV: task.ExpectedCSV,
 		TestCount:   len(task.Tests),
 	}

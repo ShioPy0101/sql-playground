@@ -8,8 +8,9 @@ import (
 )
 
 type executeRequest struct {
-	CSV   string `json:"csv"`
-	Query string `json:"query"`
+	CSV      string `json:"csv"`
+	Query    string `json:"query"`
+	CheckSQL string `json:"checkSql"`
 }
 
 type executeResponse struct {
@@ -41,7 +42,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resultCSV, err := sqliteService.Execute(req.CSV, req.Query)
+	var resultCSV string
+	var err error
+	if req.CheckSQL != "" {
+		resultCSV, err = sqliteService.ExecuteAndInspect(req.CSV, req.Query, req.CheckSQL)
+	} else {
+		resultCSV, err = sqliteService.Execute(req.CSV, req.Query)
+	}
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{
 			Message: err.Error(),

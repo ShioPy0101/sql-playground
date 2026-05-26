@@ -34,6 +34,33 @@ func TestHandlerExecutesSQL(t *testing.T) {
 	}
 }
 
+func TestHandlerExecutesSQLWithInspection(t *testing.T) {
+	body := []byte(`{
+		"csv": "",
+		"query": "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+		"checkSql": "SELECT name, type, \"notnull\", pk FROM pragma_table_info('users') ORDER BY cid;"
+	}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/sqlite/execute", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+
+	Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, rec.Code, rec.Body.String())
+	}
+
+	var res executeResponse
+	if err := json.NewDecoder(rec.Body).Decode(&res); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	want := "name,type,notnull,pk\nid,INTEGER,0,1\nname,TEXT,1,0\n"
+	if res.CSV != want {
+		t.Fatalf("expected csv %q, got %q", want, res.CSV)
+	}
+}
+
 func TestHandlerRejectsNonPost(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/sqlite/execute", nil)
 	rec := httptest.NewRecorder()

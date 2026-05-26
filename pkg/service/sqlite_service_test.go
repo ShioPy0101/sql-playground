@@ -127,3 +127,21 @@ user_id,team
 		t.Fatalf("Execute() = %q, want %q", got, want)
 	}
 }
+
+func TestSQLiteServiceExecuteAndInspect(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.ExecuteAndInspect(
+		"",
+		`CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);`,
+		`SELECT name, type, "notnull", pk FROM pragma_table_info('users') ORDER BY cid;`,
+	)
+	if err != nil {
+		t.Fatalf("ExecuteAndInspect returned error: %v", err)
+	}
+
+	want := "name,type,notnull,pk\nid,INTEGER,0,1\nname,TEXT,1,0\n"
+	if got != want {
+		t.Fatalf("ExecuteAndInspect() = %q, want %q", got, want)
+	}
+}

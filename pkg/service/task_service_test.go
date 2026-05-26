@@ -498,6 +498,34 @@ func TestTaskServiceTableDesignTaskSolutionsPass(t *testing.T) {
 	}
 }
 
+func TestTaskServiceBundledTaskSolutionsPass(t *testing.T) {
+	service := newTestTaskService(t)
+
+	tasks, err := service.ListPublicTasks()
+	if err != nil {
+		t.Fatalf("ListPublicTasks returned error: %v", err)
+	}
+
+	for _, publicTask := range tasks {
+		taskNumber := fmt.Sprintf("%03d", publicTask.Number)
+		task, err := service.LoadTask(taskNumber)
+		if err != nil {
+			t.Fatalf("LoadTask(%s) returned error: %v", taskNumber, err)
+		}
+		if task.SolutionSQL == "" {
+			continue
+		}
+
+		result, err := service.Submit(taskNumber, task.SolutionSQL)
+		if err != nil {
+			t.Fatalf("Submit(%s) returned error: %v", taskNumber, err)
+		}
+		if !result.Passed {
+			t.Fatalf("solution for task %s did not pass: %#v", taskNumber, result)
+		}
+	}
+}
+
 func newTestTaskService(t *testing.T) *TaskService {
 	t.Helper()
 	t.Setenv("DATABASE_URL", "")

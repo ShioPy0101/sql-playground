@@ -2,7 +2,7 @@
   "number": 8,
   "slug": "sum-orders-write",
   "title": "[書いてみよう] 合計を求める",
-  "statement": "orders テーブルの total の合計を total_sales という列名で表示してください。\n\n合計には SUM を使います。total は数値として合計したいので CAST(total AS INTEGER) を使いましょう。",
+  "statement": "orders テーブルの total の合計を total_sales という列名で表示してください。\n\n合計には SUM を使います。",
   "constraints": [
     {
       "name": "集計",
@@ -15,7 +15,7 @@
   ],
   "csv": "[orders]\nid,customer,total\n1,Aoi,1200\n2,Ren,800\n3,Aoi,500",
   "starterSql": "SELECT\n  -- 合計を total_sales という名前で出します\nFROM orders;",
-  "solutionSql": "SELECT\n  SUM(CAST(total AS INTEGER)) AS total_sales\nFROM orders;",
+  "solutionSql": "SELECT\n  SUM(total) AS total_sales\nFROM orders;",
   "expectedCsv": "total_sales\n2500\n",
   "tests": [
     {

@@ -5,22 +5,28 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 )
 
-// createCSVTable imports one CSV section as a SQLite table with TEXT columns.
+// createCSVTable imports one CSV section as a SQLite table.
 func createCSVTable(db *sql.DB, tableName string, csvText string) error {
 	reader := newCSVReader(csvText)
 	headers, err := readCSVHeaders(reader)
 	if err != nil {
 		return err
 	}
-
-	if err := createTable(db, tableName, headers); err != nil {
+	records, err := readCSVRecords(reader)
+	if err != nil {
 		return err
 	}
 
-	return insertCSVRecords(db, reader, tableName, headers)
+	columnTypes := inferColumnTypes(records, len(headers))
+	if err := createTable(db, tableName, headers, columnTypes); err != nil {
+		return err
+	}
+
+	return insertCSVRecords(db, records, tableName, headers, columnTypes)
 }
 
 func newCSVReader(csvText string) *csv.Reader {
@@ -58,11 +64,64 @@ func normalizeHeaders(headers []string) []string {
 	return normalized
 }
 
-// createTable creates a SQLite table using the CSV headers as TEXT columns.
-func createTable(db *sql.DB, tableName string, headers []string) error {
+// readCSVRecords reads the CSV body after the header row.
+func readCSVRecords(reader *csv.Reader) ([][]string, error) {
+	var records [][]string
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			return records, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+}
+
+func inferColumnTypes(records [][]string, columnCount int) []string {
+	columnTypes := make([]string, columnCount)
+	for column := range columnTypes {
+		columnTypes[column] = "TEXT"
+		if columnHasOnlyIntegers(records, column) {
+			columnTypes[column] = "INTEGER"
+		}
+	}
+	return columnTypes
+}
+
+func columnHasOnlyIntegers(records [][]string, column int) bool {
+	if len(records) == 0 {
+		return false
+	}
+
+	for _, record := range records {
+		if column >= len(record) || !isIntegerLiteral(record[column]) {
+			return false
+		}
+	}
+	return true
+}
+
+func isIntegerLiteral(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false
+	}
+
+	if _, err := strconv.ParseInt(value, 10, 64); err != nil {
+		return false
+	}
+
+	unsigned := strings.TrimPrefix(strings.TrimPrefix(value, "-"), "+")
+	return len(unsigned) == 1 || !strings.HasPrefix(unsigned, "0")
+}
+
+// createTable creates a SQLite table using inferred CSV column types.
+func createTable(db *sql.DB, tableName string, headers []string, columnTypes []string) error {
 	columnDefs := make([]string, len(headers))
 	for i, header := range headers {
-		columnDefs[i] = fmt.Sprintf("%s TEXT", quoteIdentifier(header))
+		columnDefs[i] = fmt.Sprintf("%s %s", quoteIdentifier(header), columnTypes[i])
 	}
 
 	_, err := db.Exec(fmt.Sprintf(
@@ -73,8 +132,8 @@ func createTable(db *sql.DB, tableName string, headers []string) error {
 	return err
 }
 
-// insertCSVRecords inserts remaining CSV rows, padding short rows with empty strings.
-func insertCSVRecords(db *sql.DB, reader *csv.Reader, tableName string, headers []string) error {
+// insertCSVRecords inserts CSV rows, padding short rows with empty strings.
+func insertCSVRecords(db *sql.DB, records [][]string, tableName string, headers []string, columnTypes []string) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -87,16 +146,8 @@ func insertCSVRecords(db *sql.DB, reader *csv.Reader, tableName string, headers 
 	}
 	defer stmt.Close()
 
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		if _, err := stmt.Exec(csvRecordValues(record, len(headers))...); err != nil {
+	for _, record := range records {
+		if _, err := stmt.Exec(csvRecordValues(record, len(headers), columnTypes)...); err != nil {
 			return err
 		}
 	}
@@ -121,14 +172,22 @@ func placeholders(count int) string {
 	return strings.Join(values, ", ")
 }
 
-func csvRecordValues(record []string, columnCount int) []any {
+func csvRecordValues(record []string, columnCount int, columnTypes []string) []any {
 	values := make([]any, columnCount)
 	for i := range columnCount {
-		if i < len(record) {
-			values[i] = record[i]
-		} else {
+		if i >= len(record) {
 			values[i] = ""
+			continue
 		}
+
+		value := record[i]
+		if columnTypes[i] == "INTEGER" {
+			if parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64); err == nil {
+				values[i] = parsed
+				continue
+			}
+		}
+		values[i] = value
 	}
 	return values
 }

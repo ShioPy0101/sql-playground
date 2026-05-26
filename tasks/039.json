@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[orders]\nid,ordered_at,total\n101,2026-05-08,3000\n102,2026-05-07,1200\n103,2026-05-06,900\n104,2026-05-05,1800\n105,2026-05-05,1600\n106,2026-05-04,2200\n107,2026-05-03,700\n108,2026-05-02,500",
-  "starterSql": "SELECT\n  id,\n  ordered_at,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE ordered_at < '2026-05-05'\n   OR (ordered_at = '2026-05-05' AND CAST(id AS INTEGER) < 105)\nORDER BY ordered_at DESC, CAST(id AS INTEGER) DESC\nLIMIT 3;",
-  "solutionSql": "SELECT\n  id,\n  ordered_at,\n  CAST(total AS INTEGER) AS total\nFROM orders\nWHERE ordered_at < '2026-05-05'\n   OR (ordered_at = '2026-05-05' AND CAST(id AS INTEGER) < 105)\nORDER BY ordered_at DESC, CAST(id AS INTEGER) DESC\nLIMIT 3;",
+  "starterSql": "SELECT\n  id,\n  ordered_at,\n  total\nFROM orders\nWHERE ordered_at < '2026-05-05'\n   OR (ordered_at = '2026-05-05' AND id < 105)\nORDER BY ordered_at DESC, id DESC\nLIMIT 3;",
+  "solutionSql": "SELECT\n  id,\n  ordered_at,\n  total\nFROM orders\nWHERE ordered_at < '2026-05-05'\n   OR (ordered_at = '2026-05-05' AND id < 105)\nORDER BY ordered_at DESC, id DESC\nLIMIT 3;",
   "expectedCsv": "id,ordered_at,total\n104,2026-05-05,1800\n106,2026-05-04,2200\n107,2026-05-03,700\n",
   "tests": [
     {

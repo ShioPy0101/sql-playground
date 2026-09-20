@@ -47,7 +47,7 @@ export function PlaygroundPage() {
       <header className="app-header">
         <div>
           <p className="eyebrow">SQLite CSV実行環境</p>
-          <h1>SQLプレイグラウンド</h1>
+          <h1 className="playground-title">SQLプレイグラウンド</h1>
         </div>
         <button form="sql-form" className="run-button" disabled={isRunning}>
           {isRunning ? "実行中..." : "SQLを実行"}

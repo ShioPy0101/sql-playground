@@ -1,8 +1,9 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { executeSQL } from "../api/client";
 import { EditorPanel } from "../components/EditorPanel";
 import { ResultPanel } from "../components/ResultPanel";
 import { formatTableLabel } from "../utils/csv";
+import { decodePlaygroundState, encodePlaygroundState } from "../utils/shareState";
 
 const sampleCSV = `name,team,score
 Alice,red,82
@@ -18,13 +19,73 @@ FROM input
 GROUP BY team
 ORDER BY average_score DESC;`;
 
+const defaultDialect = "sqlite";
+
 export function PlaygroundPage() {
   const [csv, setCSV] = useState(sampleCSV);
   const [query, setQuery] = useState(sampleQuery);
+  const [dialect, setDialect] = useState(defaultDialect);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  const [isShareStateReady, setIsShareStateReady] = useState(false);
   const tableLabel = useMemo(() => formatTableLabel(csv), [csv]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const encoded = new URLSearchParams(window.location.hash.slice(1)).get("state");
+
+    async function restoreShareState() {
+      if (encoded) {
+        const state = await decodePlaygroundState(encoded);
+        if (!cancelled && state) {
+          setCSV(state.csv);
+          setQuery(state.sql);
+          setDialect(state.dialect);
+        }
+      }
+
+      if (!cancelled) {
+        setIsShareStateReady(true);
+      }
+    }
+
+    void restoreShareState();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isShareStateReady) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const encoded = await encodePlaygroundState({ csv, sql: query, dialect });
+        if (cancelled) {
+          return;
+        }
+
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        hash.set("state", encoded);
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}#${hash.toString()}`
+        );
+      } catch (encodeError) {
+        console.error("Failed to encode playground share state", encodeError);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [csv, dialect, isShareStateReady, query]);
 
   async function handleExecute(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +125,7 @@ export function PlaygroundPage() {
         />
         <EditorPanel
           title="SQL"
-          label="SQLite"
+          label={dialect === "sqlite" ? "SQLite" : dialect}
           value={query}
           ariaLabel="SQLクエリ"
           onChange={setQuery}

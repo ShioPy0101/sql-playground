@@ -58,6 +58,7 @@ export type CurrentUser = {
 
 export type TaskSubmission = {
   id: number;
+  eventId: number | null;
   userId: string;
   taskNumber: number;
   taskSlug: string;
@@ -66,6 +67,46 @@ export type TaskSubmission = {
   passed: boolean;
   cases: TaskCaseResult[];
   submittedAt: string;
+};
+
+export type Event = {
+  id: number;
+  slug: string;
+  title: string;
+  startsAt: string;
+  endsAt: string | null;
+  createdAt: string;
+};
+
+export type EventParticipant = {
+  id: number;
+  eventId: number;
+  userId: string;
+  username: string;
+  joinedAt: string;
+};
+
+export type EventPageResponse = {
+  event: Event;
+  participant: EventParticipant | null;
+  started: boolean;
+  tasks: TaskSummary[];
+};
+
+export type EventSummary = Event & {
+  participantCount: number;
+  submissionCount: number;
+};
+
+export type EventSubmission = TaskSubmission & { username: string };
+
+export type AdminEventDetail = Event & {
+  taskNumbers: number[];
+  participants: EventParticipant[];
+  submissions: EventSubmission[];
+  participantCount: number;
+  submitterCount: number;
+  submissionCount: number;
 };
 
 export type AdminSubmissionsResponse = {
@@ -101,6 +142,18 @@ export async function fetchTask(number: string) {
   return getJSON<Task>(`/api/tasks/${number}`);
 }
 
+export async function fetchEvent(slug: string) {
+  return getJSON<EventPageResponse>(`/api/events/${encodeURIComponent(slug)}`);
+}
+
+export async function joinEvent(slug: string, username: string) {
+  return postJSON<EventParticipant>(`/api/events/${encodeURIComponent(slug)}/join`, { username });
+}
+
+export async function fetchEventTask(slug: string, number: string) {
+  return getJSON<Task>(`/api/events/${encodeURIComponent(slug)}/tasks/${number}`);
+}
+
 export async function fetchTasks() {
   return getJSON<TaskListResponse>("/api/tasks");
 }
@@ -109,8 +162,34 @@ export async function submitTask(number: string, query: string) {
   return postJSON<TaskSubmitResult>(`/api/tasks/${number}/submit`, { query });
 }
 
+export async function submitEventTask(slug: string, number: string, query: string) {
+  return postJSON<TaskSubmitResult>(`/api/events/${encodeURIComponent(slug)}/tasks/${number}/submit`, { query });
+}
+
 export async function fetchTaskSubmissions(number: string) {
   return getJSON<TaskSubmissionsResponse>(`/api/tasks/${number}/history`);
+}
+
+export async function fetchEventTaskSubmissions(slug: string, number: string) {
+  return getJSON<TaskSubmissionsResponse>(`/api/events/${encodeURIComponent(slug)}/tasks/${number}/history`);
+}
+
+export async function fetchAdminEvents() {
+  return getJSON<{ events: EventSummary[] }>("/api/admin/events");
+}
+
+export async function createAdminEvent(input: {
+  title: string;
+  slug: string;
+  startsAt: string;
+  endsAt?: string;
+  taskNumbers: number[];
+}) {
+  return postJSON<Event>("/api/admin/events", input);
+}
+
+export async function fetchAdminEvent(slug: string) {
+  return getJSON<AdminEventDetail>(`/api/admin/events/${encodeURIComponent(slug)}`);
 }
 
 export async function fetchAdminSubmissions() {

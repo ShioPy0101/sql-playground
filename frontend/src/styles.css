@@ -21,8 +21,114 @@ body {
 }
 
 button,
-textarea {
+textarea,
+input {
   font: inherit;
+}
+
+.event-time {
+  margin: -12px 0 24px;
+  color: #5f6368;
+}
+
+.event-join-card,
+.admin-events,
+.event-admin-info {
+  margin-bottom: 28px;
+  padding: 22px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+}
+
+.event-join-card > p {
+  margin: 10px 0 18px;
+  color: #5f6368;
+}
+
+.event-join-form,
+.event-create-form {
+  display: grid;
+  gap: 14px;
+}
+
+.event-join-form label,
+.event-create-form label {
+  display: grid;
+  gap: 6px;
+  color: #5f6368;
+  font-size: 0.84rem;
+}
+
+.event-join-form input,
+.event-create-form input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  color: #202124;
+  background: #fff;
+}
+
+.admin-events > .panel-heading {
+  margin-bottom: 18px;
+}
+
+.admin-event-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 24px;
+}
+
+.event-create-form fieldset {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+}
+
+.event-task-picker {
+  display: grid;
+  max-height: 190px;
+  overflow: auto;
+  gap: 6px;
+}
+
+.event-task-picker label {
+  display: flex;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+}
+
+.event-task-picker input {
+  min-height: auto;
+}
+
+.event-task-order,
+.event-admin-info > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.event-admin-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.event-admin-info > div {
+  display: grid;
+  justify-content: initial;
+  padding: 0;
+}
+
+@media (max-width: 800px) {
+  .admin-event-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 button {

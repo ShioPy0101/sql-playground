@@ -1,10 +1,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
   fetchCurrentUser,
+  fetchEvent,
+  fetchEventTask,
+  fetchEventTaskSubmissions,
   fetchTask,
   fetchTasks,
   fetchTaskSubmissions,
   submitTask,
+  submitEventTask,
   Task,
   TaskSubmission,
   TaskSubmitResult
@@ -17,6 +21,7 @@ import { executeSQL } from "../api/client";
 
 type TaskPageProps = {
   number: string;
+  eventSlug?: string;
 };
 
 type TaskNavigation = {
@@ -33,7 +38,7 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export function TaskPage({ number }: TaskPageProps) {
+export function TaskPage({ number, eventSlug }: TaskPageProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [taskNavigation, setTaskNavigation] = useState<TaskNavigation>({ total: 0 });
   const [query, setQuery] = useState("");
@@ -56,7 +61,8 @@ export function TaskPage({ number }: TaskPageProps) {
     setSubmissions([]);
     setShowSolution(false);
 
-    fetchTask(number)
+    const request = eventSlug ? fetchEventTask(eventSlug, number) : fetchTask(number);
+    request
       .then((payload) => {
         if (ignore) {
           return;
@@ -73,13 +79,14 @@ export function TaskPage({ number }: TaskPageProps) {
     return () => {
       ignore = true;
     };
-  }, [number]);
+  }, [eventSlug, number]);
 
   useEffect(() => {
     let ignore = false;
     setHistoryError("");
 
-    fetchTaskSubmissions(number)
+    const request = eventSlug ? fetchEventTaskSubmissions(eventSlug, number) : fetchTaskSubmissions(number);
+    request
       .then((payload) => {
         if (!ignore) {
           setSubmissions(payload.submissions ?? []);
@@ -94,12 +101,13 @@ export function TaskPage({ number }: TaskPageProps) {
     return () => {
       ignore = true;
     };
-  }, [number]);
+  }, [eventSlug, number]);
 
   useEffect(() => {
     let ignore = false;
 
-    fetchTasks()
+    const request = eventSlug ? fetchEvent(eventSlug).then((payload) => ({ tasks: payload.tasks })) : fetchTasks();
+    request
       .then((payload) => {
         if (ignore) {
           return;
@@ -123,7 +131,7 @@ export function TaskPage({ number }: TaskPageProps) {
     return () => {
       ignore = true;
     };
-  }, [number]);
+  }, [eventSlug, number]);
 
   useEffect(() => {
     let ignore = false;
@@ -170,9 +178,11 @@ export function TaskPage({ number }: TaskPageProps) {
     setError("");
 
     try {
-      const payload = await submitTask(number, query);
+      const payload = eventSlug ? await submitEventTask(eventSlug, number, query) : await submitTask(number, query);
       setJudgeResult(payload);
-      const history = await fetchTaskSubmissions(number);
+      const history = eventSlug
+        ? await fetchEventTaskSubmissions(eventSlug, number)
+        : await fetchTaskSubmissions(number);
       setSubmissions(history.submissions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "提出に失敗しました");
@@ -215,12 +225,12 @@ export function TaskPage({ number }: TaskPageProps) {
   return (
     <main className="app-shell task-shell">
       <nav className="task-nav" aria-label="問題ナビゲーション">
-        <a className="text-link" href="/">
-          タスク問題に戻る
+        <a className="text-link" href={eventSlug ? `/events/${eventSlug}` : "/"}>
+          {eventSlug ? "イベントに戻る" : "タスク問題に戻る"}
         </a>
         <div className="task-nav-pager">
           {taskNavigation.previousNumber ? (
-            <a className="secondary-link compact" href={`/tasks/${taskNavigation.previousNumber}`}>
+            <a className="secondary-link compact" href={eventSlug ? `/events/${eventSlug}/tasks/${taskNavigation.previousNumber}` : `/tasks/${taskNavigation.previousNumber}`}>
               前の問題
             </a>
           ) : (
@@ -234,7 +244,7 @@ export function TaskPage({ number }: TaskPageProps) {
             </span>
           ) : null}
           {taskNavigation.nextNumber ? (
-            <a className="secondary-link compact" href={`/tasks/${taskNavigation.nextNumber}`}>
+            <a className="secondary-link compact" href={eventSlug ? `/events/${eventSlug}/tasks/${taskNavigation.nextNumber}` : `/tasks/${taskNavigation.nextNumber}`}>
               次の問題
             </a>
           ) : (
@@ -326,11 +336,11 @@ export function TaskPage({ number }: TaskPageProps) {
       </form>
 
       <nav className="task-bottom-nav" aria-label="次の操作">
-        <a className="secondary-link" href="/">
-          タスク問題に戻る
+        <a className="secondary-link" href={eventSlug ? `/events/${eventSlug}` : "/"}>
+          {eventSlug ? "イベントに戻る" : "タスク問題に戻る"}
         </a>
         {taskNavigation.nextNumber ? (
-          <a className="run-button link-button" href={`/tasks/${taskNavigation.nextNumber}`}>
+          <a className="run-button link-button" href={eventSlug ? `/events/${eventSlug}/tasks/${taskNavigation.nextNumber}` : `/tasks/${taskNavigation.nextNumber}`}>
             次の問題へ
           </a>
         ) : (

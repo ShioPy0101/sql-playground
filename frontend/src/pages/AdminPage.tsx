@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { checkAdminSolutions, fetchAdminSubmissions, TaskSolutionCheck, TaskSubmission } from "../api/client";
+import { AdminEventsPanel } from "./AdminEventsPanel";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
@@ -83,6 +84,8 @@ export function AdminPage() {
 
       {error ? <pre className="error-output inline">{error}</pre> : null}
       {checkError ? <pre className="error-output inline">{checkError}</pre> : null}
+
+      <AdminEventsPanel />
 
       <section className="admin-summary" aria-label="提出サマリー">
         <div>

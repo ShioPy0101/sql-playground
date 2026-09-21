@@ -129,7 +129,6 @@ export async function renderTableAsPng(table: HTMLTableElement) {
       overflow: hidden;
       width: max-content;
       border: 2px solid #dfe3e8;
-      border-radius: 24px;
       background: #ffffff;
     }
     .table-image-export table {

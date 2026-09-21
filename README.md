@@ -32,6 +32,14 @@ PORT=18080 go run ./backend/cmd/server
 SUBMISSIONS_DB_PATH=/tmp/sql-playground-submissions.sqlite go run ./backend/cmd/server
 ```
 
+Admin とイベント作成を利用する場合は Basic 認証情報も設定します。
+
+```sh
+ADMIN_USERNAME=admin ADMIN_PASSWORD=secret go run ./backend/cmd/server
+```
+
+Admin の `/admin` でイベント名、slug、開始・終了日時、既存課題と表示順を指定すると、参加URL `/events/:slug` が作成されます。イベント情報と提出は通常の提出履歴と同じ SQLite / PostgreSQL に保存され、通常提出は `event_id = NULL` のまま扱われます。
+
 ### 2. フロントエンドを起動
 
 別のターミナルで `frontend` ディレクトリに移動し、依存関係をインストールして起動します。
@@ -49,6 +57,14 @@ Vite の開発サーバーは `/api` へのリクエストを `http://localhost:
 ```sh
 API_TARGET=http://localhost:18080 npm run dev
 ```
+
+イベント画面とAdminのイベント状況を定期更新する場合は、再取得間隔を秒数で指定します。未設定または `0` の場合は自動更新しません。
+
+```sh
+VITE_EVENT_REFRESH_INTERVAL_SECONDS=5 npm run dev
+```
+
+Viteの環境変数はフロントエンドのビルド時に埋め込まれるため、デプロイ環境で変更した場合は再ビルドしてください。
 
 ## テストとビルド
 
@@ -91,5 +107,11 @@ npm run build
 - `GET /api/tasks`: 問題一覧
 - `GET /api/tasks/:number`: 問題詳細
 - `POST /api/tasks/:number/submit`: 回答提出
+- `GET /api/events/:slug`: イベント情報・参加状況・課題一覧
+- `POST /api/events/:slug/join`: 表示名を登録してイベントへ参加
+- `GET /api/events/:slug/tasks/:number`: イベント内の問題詳細
+- `POST /api/events/:slug/tasks/:number/submit`: イベント内で回答提出
 - `POST /api/sqlite/execute`: SQL 実行
 - `GET /api/admin/submissions`: 提出履歴一覧
+- `GET, POST /api/admin/events`: イベント一覧・作成
+- `GET /api/admin/events/:slug`: イベント別の参加者・提出履歴

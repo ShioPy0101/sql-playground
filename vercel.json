@@ -6,23 +6,23 @@
   "rewrites": [
     {
       "source": "/api/events/:slug/tasks/:number/submit",
-      "destination": "/api/events/submit?slug=:slug&number=:number"
+      "destination": "/api/events?action=submit&slug=:slug&number=:number"
     },
     {
       "source": "/api/events/:slug/tasks/:number/history",
-      "destination": "/api/events/history?slug=:slug&number=:number"
+      "destination": "/api/events?action=history&slug=:slug&number=:number"
     },
     {
       "source": "/api/events/:slug/tasks/:number",
-      "destination": "/api/events/task?slug=:slug&number=:number"
+      "destination": "/api/events?action=task&slug=:slug&number=:number"
     },
     {
       "source": "/api/events/:slug/join",
-      "destination": "/api/events/join?slug=:slug"
+      "destination": "/api/events?action=join&slug=:slug"
     },
     {
       "source": "/api/events/:slug",
-      "destination": "/api/events/show?slug=:slug"
+      "destination": "/api/events?action=show&slug=:slug"
     },
     {
       "source": "/api/admin/events/:slug",

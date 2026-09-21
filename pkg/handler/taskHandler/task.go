@@ -151,6 +151,113 @@ func (h *TaskHandler) AdminCheckSolutions(c echo.Context) error {
 	})
 }
 
+func (h *TaskHandler) EventPage(c echo.Context) error {
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to identify user"})
+	}
+	page, err := h.service.EventPage(c.Param("slug"), userID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, page)
+}
+
+func (h *TaskHandler) JoinEvent(c echo.Context) error {
+	var request struct {
+		Username string `json:"username"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request body"})
+	}
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to identify user"})
+	}
+	participant, err := h.service.JoinEvent(c.Param("slug"), userID, request.Username)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, participant)
+}
+
+func (h *TaskHandler) GetEventTask(c echo.Context) error {
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to identify user"})
+	}
+	task, err := h.service.GetEventTask(c.Param("slug"), c.Param("number"), userID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, task)
+}
+
+func (h *TaskHandler) SubmitEventTask(c echo.Context) error {
+	var request SubmitRequest
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request body"})
+	}
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to identify user"})
+	}
+	result, err := h.service.SubmitEventTask(c.Param("slug"), c.Param("number"), request.Query, userID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, result)
+}
+
+func (h *TaskHandler) EventTaskHistory(c echo.Context) error {
+	userID, err := ensureUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to identify user"})
+	}
+	submissions, err := h.service.EventTaskSubmissions(c.Param("slug"), c.Param("number"), userID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string][]service.TaskSubmission{"submissions": submissions})
+}
+
+func (h *TaskHandler) AdminEvents(c echo.Context) error {
+	if !httpapi.RequireAdminBasicAuth(c.Response().Writer, c.Request()) {
+		return nil
+	}
+	events, err := h.service.Events()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "failed to load events"})
+	}
+	return c.JSON(http.StatusOK, map[string][]service.EventSummary{"events": events})
+}
+
+func (h *TaskHandler) AdminCreateEvent(c echo.Context) error {
+	if !httpapi.RequireAdminBasicAuth(c.Response().Writer, c.Request()) {
+		return nil
+	}
+	var input service.CreateEventInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request body"})
+	}
+	event, err := h.service.CreateEvent(input)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusCreated, event)
+}
+
+func (h *TaskHandler) AdminEvent(c echo.Context) error {
+	if !httpapi.RequireAdminBasicAuth(c.Response().Writer, c.Request()) {
+		return nil
+	}
+	detail, err := h.service.AdminEvent(c.Param("slug"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, detail)
+}
+
 const userCookieName = "sql_playground_user_id"
 
 func ensureUserID(c echo.Context) (string, error) {

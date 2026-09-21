@@ -21,6 +21,7 @@ func main() {
 	sqliteAPI := api.Group("/sqlite")
 	taskAPI := api.Group("/tasks")
 	adminAPI := api.Group("/admin")
+	eventAPI := api.Group("/events")
 	// pandasAPI := api.Group("/pandas")
 
 	e.GET("/", func(c echo.Context) error {
@@ -44,6 +45,14 @@ func main() {
 	taskAPI.GET("/:number/history", taskHandlerInstance.History)
 	adminAPI.GET("/submissions", taskHandlerInstance.AdminSubmissions)
 	adminAPI.POST("/check-solutions", taskHandlerInstance.AdminCheckSolutions)
+	adminAPI.GET("/events", taskHandlerInstance.AdminEvents)
+	adminAPI.POST("/events", taskHandlerInstance.AdminCreateEvent)
+	adminAPI.GET("/events/:slug", taskHandlerInstance.AdminEvent)
+	eventAPI.GET("/:slug", taskHandlerInstance.EventPage)
+	eventAPI.POST("/:slug/join", taskHandlerInstance.JoinEvent)
+	eventAPI.GET("/:slug/tasks/:number", taskHandlerInstance.GetEventTask)
+	eventAPI.POST("/:slug/tasks/:number/submit", taskHandlerInstance.SubmitEventTask)
+	eventAPI.GET("/:slug/tasks/:number/history", taskHandlerInstance.EventTaskHistory)
 	// pandasAPI.GET("/examples", pandasHandler.ListExamples)
 
 	e.Logger.Fatal(e.Start(serverAddress()))

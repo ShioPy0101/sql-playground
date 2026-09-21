@@ -62,6 +62,7 @@ func (s *SubmissionStore) Insert(submission TaskSubmission) error {
 
 	_, err = s.db.Exec(s.rebind(`
 		INSERT INTO task_submissions (
+			event_id,
 			user_id,
 			task_number,
 			task_slug,
@@ -70,8 +71,9 @@ func (s *SubmissionStore) Insert(submission TaskSubmission) error {
 			passed,
 			cases_json,
 			submitted_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`),
+		submission.EventID,
 		submission.UserID,
 		submission.TaskNumber,
 		submission.TaskSlug,
@@ -88,6 +90,7 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 	rows, err := s.db.Query(`
 		SELECT
 			id,
+			event_id,
 			user_id,
 			task_number,
 			task_slug,
@@ -107,10 +110,17 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 	return scanSubmissions(rows)
 }
 
-func (s *SubmissionStore) ListByUserTask(userID string, taskNumber int) ([]TaskSubmission, error) {
+func (s *SubmissionStore) ListByUserTask(userID string, taskNumber int, eventID *int64) ([]TaskSubmission, error) {
+	whereEvent := "event_id IS NULL"
+	args := []any{userID, taskNumber}
+	if eventID != nil {
+		whereEvent = "event_id = ?"
+		args = append(args, *eventID)
+	}
 	rows, err := s.db.Query(s.rebind(`
 		SELECT
 			id,
+			event_id,
 			user_id,
 			task_number,
 			task_slug,
@@ -120,9 +130,9 @@ func (s *SubmissionStore) ListByUserTask(userID string, taskNumber int) ([]TaskS
 			cases_json,
 			submitted_at
 		FROM task_submissions
-		WHERE user_id = ? AND task_number = ?
+		WHERE user_id = ? AND task_number = ? AND `+whereEvent+`
 		ORDER BY submitted_at DESC, id DESC
-	`), userID, taskNumber)
+	`), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +149,7 @@ func (s *SubmissionStore) ProgressByUser(userID string) (map[int]UserTaskProgres
 			passed,
 			submitted_at
 		FROM task_submissions
-		WHERE user_id = ?
+		WHERE user_id = ? AND event_id IS NULL
 		ORDER BY submitted_at DESC, id DESC
 	`), userID)
 	if err != nil {
@@ -191,6 +201,7 @@ func scanSubmissions(rows *sql.Rows) ([]TaskSubmission, error) {
 		var submittedAt string
 		if err := rows.Scan(
 			&submission.ID,
+			&submission.EventID,
 			&submission.UserID,
 			&submission.TaskNumber,
 			&submission.TaskSlug,
@@ -223,12 +234,16 @@ func scanSubmissions(rows *sql.Rows) ([]TaskSubmission, error) {
 
 func (s *SubmissionStore) migrate() error {
 	if s.dialect == "postgres" {
-		return s.migratePostgres()
+		if err := s.migratePostgres(); err != nil {
+			return err
+		}
+		return s.migrateEvents()
 	}
 
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS task_submissions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			event_id INTEGER NULL,
 			user_id TEXT NOT NULL,
 			task_number INTEGER NOT NULL,
 			task_slug TEXT NOT NULL,
@@ -248,13 +263,29 @@ func (s *SubmissionStore) migrate() error {
 		CREATE INDEX IF NOT EXISTS idx_task_submissions_user_task
 			ON task_submissions (user_id, task_number, submitted_at DESC, id DESC);
 	`)
-	return err
+	if err != nil {
+		return err
+	}
+	if !s.sqliteColumnExists("task_submissions", "event_id") {
+		if _, err := s.db.Exec(`ALTER TABLE task_submissions ADD COLUMN event_id INTEGER NULL`); err != nil {
+			return err
+		}
+	}
+	_, err = s.db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_task_submissions_event
+			ON task_submissions (event_id, submitted_at ASC, id ASC);
+	`)
+	if err != nil {
+		return err
+	}
+	return s.migrateEvents()
 }
 
 func (s *SubmissionStore) migratePostgres() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS task_submissions (
 			id BIGSERIAL PRIMARY KEY,
+			event_id BIGINT NULL,
 			user_id TEXT NOT NULL,
 			task_number INTEGER NOT NULL,
 			task_slug TEXT NOT NULL,
@@ -265,6 +296,8 @@ func (s *SubmissionStore) migratePostgres() error {
 			submitted_at TEXT NOT NULL
 		);
 
+		ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS event_id BIGINT NULL;
+
 		CREATE INDEX IF NOT EXISTS idx_task_submissions_submitted_at
 			ON task_submissions (submitted_at DESC, id DESC);
 
@@ -273,8 +306,29 @@ func (s *SubmissionStore) migratePostgres() error {
 
 		CREATE INDEX IF NOT EXISTS idx_task_submissions_user_task
 			ON task_submissions (user_id, task_number, submitted_at DESC, id DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_task_submissions_event
+			ON task_submissions (event_id, submitted_at ASC, id ASC);
 	`)
 	return err
+}
+
+func (s *SubmissionStore) sqliteColumnExists(table, column string) bool {
+	rows, err := s.db.Query(`PRAGMA table_info(` + table + `)`)
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull, primaryKey int
+		var defaultValue any
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err == nil && name == column {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *SubmissionStore) rebind(query string) string {

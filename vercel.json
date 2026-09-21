@@ -5,6 +5,30 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
+      "source": "/api/events/:slug/tasks/:number/submit",
+      "destination": "/api/events/submit?slug=:slug&number=:number"
+    },
+    {
+      "source": "/api/events/:slug/tasks/:number/history",
+      "destination": "/api/events/history?slug=:slug&number=:number"
+    },
+    {
+      "source": "/api/events/:slug/tasks/:number",
+      "destination": "/api/events/task?slug=:slug&number=:number"
+    },
+    {
+      "source": "/api/events/:slug/join",
+      "destination": "/api/events/join?slug=:slug"
+    },
+    {
+      "source": "/api/events/:slug",
+      "destination": "/api/events/show?slug=:slug"
+    },
+    {
+      "source": "/api/admin/events/:slug",
+      "destination": "/api/admin/events/show?slug=:slug"
+    },
+    {
       "source": "/api/tasks/:number/submit",
       "destination": "/api/tasks/submit?number=:number"
     },
@@ -18,6 +42,18 @@
     },
     {
       "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/events/:slug",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/events/:slug/tasks/:number",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/events/:slug",
       "destination": "/index.html"
     },
     {

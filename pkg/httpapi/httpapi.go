@@ -67,6 +67,10 @@ func NumberParam(r *http.Request) string {
 	return strings.Trim(path, "/")
 }
 
+func EventSlugParam(r *http.Request) string {
+	return strings.TrimSpace(r.URL.Query().Get("slug"))
+}
+
 func RequireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 	if r.Method == method {
 		return true

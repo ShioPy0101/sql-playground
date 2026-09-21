@@ -105,6 +105,7 @@ type taskSource struct {
 
 type TaskSubmission struct {
 	ID          int              `json:"id"`
+	EventID     *int64           `json:"eventId"`
 	UserID      string           `json:"userId"`
 	TaskNumber  int              `json:"taskNumber"`
 	TaskSlug    string           `json:"taskSlug"`
@@ -223,11 +224,11 @@ func (s *TaskService) ListPublicTasksForUser(userID string) ([]PublicTaskSummary
 }
 
 func (s *TaskService) Submit(number string, query string) (TaskSubmitResult, error) {
-	return s.submit(number, query, "")
+	return s.submit(number, query, "", nil)
 }
 
 func (s *TaskService) SubmitForUser(number string, query string, userID string) (TaskSubmitResult, error) {
-	return s.submit(number, query, userID)
+	return s.submit(number, query, userID, nil)
 }
 
 func (s *TaskService) Submissions() ([]TaskSubmission, error) {
@@ -240,7 +241,7 @@ func (s *TaskService) SubmissionsForUserTask(number string, userID string) ([]Ta
 		return nil, err
 	}
 
-	return s.submissions.ListByUserTask(userID, task.Number)
+	return s.submissions.ListByUserTask(userID, task.Number, nil)
 }
 
 func (s *TaskService) CheckAllSolutions() ([]TaskSolutionCheck, error) {
@@ -277,7 +278,7 @@ func (s *TaskService) CheckAllSolutions() ([]TaskSolutionCheck, error) {
 	return checks, nil
 }
 
-func (s *TaskService) submit(number string, query string, userID string) (TaskSubmitResult, error) {
+func (s *TaskService) submit(number string, query string, userID string, eventID *int64) (TaskSubmitResult, error) {
 	task, err := s.LoadTask(number)
 	if err != nil {
 		return TaskSubmitResult{}, err
@@ -285,7 +286,7 @@ func (s *TaskService) submit(number string, query string, userID string) (TaskSu
 
 	result := s.checkTask(task, query)
 	if userID != "" {
-		if err := s.recordSubmission(task, query, result, userID); err != nil {
+		if err := s.recordSubmission(task, query, result, userID, eventID); err != nil {
 			return TaskSubmitResult{}, err
 		}
 	}
@@ -498,8 +499,9 @@ func normalizedCSV(text string) ([][]string, error) {
 	return rows, nil
 }
 
-func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string) error {
+func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string, eventID *int64) error {
 	submission := TaskSubmission{
+		EventID:     eventID,
 		UserID:      userID,
 		TaskNumber:  task.Number,
 		TaskSlug:    task.Slug,

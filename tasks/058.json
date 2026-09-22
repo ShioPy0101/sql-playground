@@ -1,6 +1,25 @@
 {
   "number": 58,
   "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "runOnFailed": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM posts WHERE tenant_id = 42 ORDER BY created_at DESC;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "dataset": {
+      "table": "posts",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+        { "name": "user_id", "type": "INTEGER", "expression": "(row_number % 50000) + 1" },
+        { "name": "title", "type": "TEXT", "expression": "printf('post title %d', row_number)" },
+        { "name": "body", "type": "TEXT", "expression": "printf('post body %d', row_number)" },
+        { "name": "created_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d 12:%02d:00', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1, row_number % 60)" }
+      ]
+    }
+  },
   "slug": "saas-avoid-over-indexing",
   "title": "[インデックス][考えてみよう] インデックスは多いほどよい？",
   "statement": "投稿一覧で使う検索は、テナントで絞って新しい順に並べる処理です。この検索に必要なインデックスだけを作成してください。\n\nposts に idx_posts_tenant_created_at (tenant_id, created_at) を1本だけ作ります。user_id, title, body の個別インデックスは追加しません。",

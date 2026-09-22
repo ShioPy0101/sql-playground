@@ -157,6 +157,7 @@ func TestTask45BenchmarkWithoutIndexesShowsFullScan(t *testing.T) {
 			status TEXT NOT NULL,
 			total INTEGER NOT NULL
 		);
+		-- customer_id と ordered_at にインデックスを作成します
 	`)
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)

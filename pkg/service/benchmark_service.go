@@ -17,6 +17,7 @@ var benchmarkSubmissionSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n
 var benchmarkFixedSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*SELECT\b`)
 
 var benchmarkDDLPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b`)
+var benchmarkCommentsOnlyPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*$`)
 var benchmarkIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var benchmarkColumnTypes = map[string]bool{"INTEGER": true, "REAL": true, "TEXT": true, "BLOB": true}
 
@@ -228,10 +229,18 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 		if len(statements) == 0 {
 			return "", "", fmt.Errorf("受講者DDLが空です")
 		}
+		ddlCount := 0
 		for _, statement := range statements {
+			if benchmarkCommentsOnlyPattern.MatchString(statement) {
+				continue
+			}
 			if !benchmarkDDLPattern.MatchString(statement) {
 				return "", "", fmt.Errorf("DDL benchmarkではCREATE TABLE / CREATE INDEXのみ利用できます")
 			}
+			ddlCount++
+		}
+		if ddlCount == 0 {
+			return "", "", fmt.Errorf("受講者DDLが空です")
 		}
 		return strings.TrimSpace(config.Query), submission, nil
 	default:

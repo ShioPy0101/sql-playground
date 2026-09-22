@@ -3,6 +3,7 @@ package service
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBenchmarkServiceRunsAllConfiguredStages(t *testing.T) {
@@ -116,7 +117,7 @@ func TestTask45BenchmarkConfigurationRunsAllStages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadTaskDefinition returned error: %v", err)
 	}
-	if task.Mode != "ddl" || task.Benchmark == nil || !task.Benchmark.Enabled {
+	if task.Mode != "ddl" || task.Benchmark == nil || !task.Benchmark.Enabled || !task.Benchmark.RunOnFailed {
 		t.Fatalf("task 45 benchmark configuration = %#v", task.Benchmark)
 	}
 
@@ -134,6 +135,59 @@ func TestTask45BenchmarkConfigurationRunsAllStages(t *testing.T) {
 		if !strings.Contains(strings.Join(result.QueryPlan, "\n"), "USING INDEX idx_orders_customer_id") {
 			t.Fatalf("rowCount %d plan = %#v, want customer index", result.RowCount, result.QueryPlan)
 		}
+	}
+}
+
+func TestTask45BenchmarkWithoutIndexesShowsFullScan(t *testing.T) {
+	task, err := LoadTaskDefinition("45")
+	if err != nil {
+		t.Fatalf("LoadTaskDefinition returned error: %v", err)
+	}
+	config := *task.Benchmark
+	config.RowCounts = []int{1_000}
+
+	report, err := NewBenchmarkService().Run(task.Mode, config, `
+		CREATE TABLE orders (
+			id INTEGER PRIMARY KEY,
+			customer_id INTEGER NOT NULL,
+			ordered_at TEXT NOT NULL,
+			status TEXT NOT NULL,
+			total INTEGER NOT NULL
+		);
+	`)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if report.Status != "completed" || len(report.Results) != 1 {
+		t.Fatalf("report = %#v, want one completed stage", report)
+	}
+	result := report.Results[0]
+	if result.FullScanSteps != 999 {
+		t.Fatalf("FULLSCAN_STEP = %d, want 999 without index", result.FullScanSteps)
+	}
+	if !strings.Contains(strings.Join(result.QueryPlan, "\n"), "SCAN orders") {
+		t.Fatalf("plan = %#v, want full table scan", result.QueryPlan)
+	}
+}
+
+func TestBenchmarkServiceStopsAtConfiguredTimeout(t *testing.T) {
+	task, err := LoadTaskDefinition("45")
+	if err != nil {
+		t.Fatalf("LoadTaskDefinition returned error: %v", err)
+	}
+	config := *task.Benchmark
+	config.RowCounts = []int{100_000}
+	config.TimeoutMS = 1
+
+	report, err := NewBenchmarkService().Run(task.Mode, config, task.SolutionSQL)
+	if err != nil {
+		t.Fatalf("Run returned configuration error: %v", err)
+	}
+	if report.Status != "failed" || len(report.Results) != 0 {
+		t.Fatalf("report = %#v, want timeout before a result", report)
+	}
+	if !strings.Contains(report.StoppedReason, "context deadline exceeded") {
+		t.Fatalf("stopped reason = %q, want timeout", report.StoppedReason)
 	}
 }
 
@@ -198,5 +252,18 @@ func TestBenchmarkServiceRejectsUnsafeSQLTarget(t *testing.T) {
 	}, `DELETE FROM posts;`)
 	if err == nil {
 		t.Fatal("Run accepted non-SELECT submission")
+	}
+}
+
+func TestBenchmarkTimeoutUsesTaskValueAndServerMaximum(t *testing.T) {
+	t.Setenv("SQLITE_BENCHMARK_TIMEOUT_MS", "2000")
+
+	timeout, err := benchmarkTimeout(750)
+	if err != nil || timeout != 750*time.Millisecond {
+		t.Fatalf("task timeout = %s, err = %v", timeout, err)
+	}
+	timeout, err = benchmarkTimeout(3000)
+	if err != nil || timeout != 2*time.Second {
+		t.Fatalf("capped timeout = %s, err = %v", timeout, err)
 	}
 }

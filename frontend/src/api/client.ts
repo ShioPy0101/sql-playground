@@ -51,6 +51,8 @@ export type Task = {
 
 export type BenchmarkConfig = {
   enabled: boolean;
+  runOnFailed?: boolean;
+  timeoutMs?: number;
   target: "submission" | "fixed-query";
   query?: string;
   rowCounts: number[];

@@ -194,7 +194,7 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
       setJudgeResult(payload);
       setBenchmarkReport(null);
       setBenchmarkError("");
-      if (payload.passed && task?.benchmark?.enabled) {
+      if (task?.benchmark?.enabled && (payload.passed || task.benchmark.runOnFailed)) {
         setIsBenchmarking(true);
         void benchmarkTask(number, query)
           .then(setBenchmarkReport)

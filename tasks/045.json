@@ -3,6 +3,8 @@
   "mode": "ddl",
   "benchmark": {
     "enabled": true,
+    "runOnFailed": true,
+    "timeoutMs": 5000,
     "target": "fixed-query",
     "query": "SELECT * FROM orders WHERE customer_id = 42;",
     "rowCounts": [1000, 10000, 50000, 100000],

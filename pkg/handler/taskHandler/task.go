@@ -98,7 +98,7 @@ func (h *TaskHandler) Benchmark(c echo.Context) error {
 	if task.Benchmark == nil || !task.Benchmark.Enabled {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": "この課題では性能計測が設定されていません"})
 	}
-	report, err := service.NewBenchmarkService().Run(task.Mode, *task.Benchmark, req.Query)
+	report, err := service.NewBenchmarkService().RunContext(c.Request().Context(), task.Mode, *task.Benchmark, req.Query)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}

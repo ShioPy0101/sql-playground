@@ -27,6 +27,7 @@ SQLite プレイグラウンドは CSV と SQL の2種類の入力形式を扱�
 - 通常の提出は `POST /api/tasks/:number/submit`、性能計測は `POST /api/tasks/:number/benchmark` とし、両者を混在させない。
 - `TaskService` は採点と提出保存だけを担当し、大量データ生成を行わない。性能計測は `BenchmarkService` の専用一時SQLite DBだけで行う。
 - benchmark は task JSON で明示的に有効化された課題だけを対象とし、各 rowCount で独立したDBを作成して必ず破棄する。
+- benchmark は既定で正解時のみ起動する。インデックス差を不正解時にも教材として示す課題だけ `benchmark.runOnFailed: true` を明示する。
 - 課題固有のデータ分布は `benchmark.dataset` のテーブル名・列名・`row_number` を使うSQLite式で宣言する。新しい課題のために `BenchmarkService` へテーブル別分岐を追加しない。
 - ある段階が失敗したら、成功済みの結果を残して後続の大きな段階を実行しない。benchmark の失敗を採点結果へ反映しない。
-- `SQLITE_BENCHMARK_MAX_ROWS` と `SQLITE_BENCHMARK_STAGE_TIMEOUT_MS` で実行環境に応じた上限を設定できる。
+- benchmark全体には未指定でも5秒のtimeoutを適用する。task JSONの `benchmark.timeoutMs` で短縮でき、`SQLITE_BENCHMARK_TIMEOUT_MS` をサーバー側の上限とする。

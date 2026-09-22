@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -26,6 +27,13 @@ type NativeStatementStatus struct {
 // database file and executes one prepared statement to collect native SQLite
 // counters. It does not access database/sql or modernc.org/sqlite internals.
 func MeasureSelectStatement(databasePath string, statement string) (NativeStatementStatus, error) {
+	return MeasureSelectStatementContext(context.Background(), databasePath, statement)
+}
+
+// MeasureSelectStatementContext checks cancellation between sqlite3_step calls.
+// Benchmark queries are deliberately restricted and bounded, so one step cannot
+// hide unbounded user SQL work.
+func MeasureSelectStatementContext(ctx context.Context, databasePath string, statement string) (NativeStatementStatus, error) {
 	tls := libc.NewTLS()
 	defer tls.Close()
 
@@ -50,7 +58,14 @@ func MeasureSelectStatement(databasePath string, statement string) (NativeStatem
 
 	startedAt := time.Now()
 	for {
-		switch rc := sqlite3.Xsqlite3_step(tls, prepared); rc {
+		if err := ctx.Err(); err != nil {
+			return NativeStatementStatus{}, err
+		}
+		rc := sqlite3.Xsqlite3_step(tls, prepared)
+		if err := ctx.Err(); err != nil {
+			return NativeStatementStatus{}, err
+		}
+		switch rc {
 		case sqlite3.SQLITE_ROW:
 			continue
 		case sqlite3.SQLITE_DONE:

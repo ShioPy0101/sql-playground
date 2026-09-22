@@ -30,7 +30,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteJSON(w, http.StatusBadRequest, httpapi.ErrorResponse{Message: "この課題では性能計測が設定されていません"})
 		return
 	}
-	report, err := service.NewBenchmarkService().Run(task.Mode, *task.Benchmark, req.Query)
+	report, err := service.NewBenchmarkService().RunContext(r.Context(), task.Mode, *task.Benchmark, req.Query)
 	if err != nil {
 		httpapi.WriteJSON(w, http.StatusBadRequest, httpapi.ErrorResponse{Message: err.Error()})
 		return

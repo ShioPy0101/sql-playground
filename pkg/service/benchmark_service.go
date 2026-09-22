@@ -21,12 +21,14 @@ var benchmarkIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var DefaultBenchmarkRowCounts = []int{1_000, 10_000, 50_000, 100_000}
 
 type BenchmarkConfig struct {
-	Enabled   bool              `json:"enabled"`
-	Target    string            `json:"target"`
-	Query     string            `json:"query,omitempty"`
-	RowCounts []int             `json:"rowCounts"`
-	SchemaSQL string            `json:"schemaSql,omitempty"`
-	Dataset   *BenchmarkDataset `json:"dataset,omitempty"`
+	Enabled     bool              `json:"enabled"`
+	RunOnFailed bool              `json:"runOnFailed,omitempty"`
+	TimeoutMS   int               `json:"timeoutMs,omitempty"`
+	Target      string            `json:"target"`
+	Query       string            `json:"query,omitempty"`
+	RowCounts   []int             `json:"rowCounts"`
+	SchemaSQL   string            `json:"schemaSql,omitempty"`
+	Dataset     *BenchmarkDataset `json:"dataset,omitempty"`
 }
 
 type BenchmarkDataset struct {
@@ -68,6 +70,10 @@ func NewBenchmarkService() *BenchmarkService {
 // call it, so normal execution, grading and submission persistence cannot
 // trigger large data generation.
 func (s *BenchmarkService) Run(taskMode string, config BenchmarkConfig, submission string) (BenchmarkReport, error) {
+	return s.RunContext(context.Background(), taskMode, config, submission)
+}
+
+func (s *BenchmarkService) RunContext(parent context.Context, taskMode string, config BenchmarkConfig, submission string) (BenchmarkReport, error) {
 	query, setupSQL, err := benchmarkInputs(taskMode, config, submission)
 	if err != nil {
 		return BenchmarkReport{}, err
@@ -82,10 +88,16 @@ func (s *BenchmarkService) Run(taskMode string, config BenchmarkConfig, submissi
 	if err != nil {
 		return BenchmarkReport{}, err
 	}
+	timeout, err := benchmarkTimeout(config.TimeoutMS)
+	if err != nil {
+		return BenchmarkReport{}, err
+	}
+	ctx, cancel := context.WithTimeout(parent, timeout)
+	defer cancel()
 
 	report := BenchmarkReport{Status: "completed", Query: query, Results: make([]BenchmarkResult, 0, len(rowCounts))}
 	for _, rowCount := range rowCounts {
-		result, err := runBenchmarkStage(rowCount, taskMode, setupSQL, query, config)
+		result, err := runBenchmarkStage(ctx, rowCount, taskMode, setupSQL, query, config)
 		if err != nil {
 			report.Status = "failed"
 			report.StoppedReason = fmt.Sprintf("%d行の計測で停止しました: %v", rowCount, err)
@@ -96,16 +108,13 @@ func (s *BenchmarkService) Run(taskMode string, config BenchmarkConfig, submissi
 	return report, nil
 }
 
-func runBenchmarkStage(rowCount int, taskMode string, setupSQL string, query string, config BenchmarkConfig) (BenchmarkResult, error) {
+func runBenchmarkStage(ctx context.Context, rowCount int, taskMode string, setupSQL string, query string, config BenchmarkConfig) (BenchmarkResult, error) {
 	db, databasePath, cleanup, err := helper.OpenTempSQLiteDBWithPath()
 	if err != nil {
 		return BenchmarkResult{}, err
 	}
 	defer cleanup()
 	defer db.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), benchmarkStageLimit())
-	defer cancel()
 
 	if taskMode == "ddl" {
 		if _, err := db.ExecContext(ctx, setupSQL); err != nil {
@@ -132,7 +141,7 @@ func runBenchmarkStage(rowCount int, taskMode string, setupSQL string, query str
 	if err != nil {
 		return BenchmarkResult{}, fmt.Errorf("実行計画取得: %w", err)
 	}
-	status, err := helper.MeasureSelectStatement(databasePath, query)
+	status, err := helper.MeasureSelectStatementContext(ctx, databasePath, query)
 	if err != nil {
 		return BenchmarkResult{}, fmt.Errorf("SELECT計測: %w", err)
 	}
@@ -256,14 +265,30 @@ func validatedBenchmarkRowCounts(requested []int) ([]int, error) {
 	return result, nil
 }
 
-func benchmarkStageLimit() time.Duration {
-	milliseconds := 5_000
-	if configured := os.Getenv("SQLITE_BENCHMARK_STAGE_TIMEOUT_MS"); configured != "" {
-		if value, err := strconv.Atoi(configured); err == nil && value > 0 {
-			milliseconds = value
-		}
+func benchmarkTimeout(requestedMilliseconds int) (time.Duration, error) {
+	if requestedMilliseconds < 0 {
+		return 0, fmt.Errorf("benchmark.timeoutMsは正の整数で指定してください")
 	}
-	return time.Duration(milliseconds) * time.Millisecond
+	if requestedMilliseconds == 0 {
+		requestedMilliseconds = 5_000
+	}
+
+	maximumMilliseconds := 5_000
+	configured := os.Getenv("SQLITE_BENCHMARK_TIMEOUT_MS")
+	if configured == "" {
+		configured = os.Getenv("SQLITE_BENCHMARK_STAGE_TIMEOUT_MS")
+	}
+	if configured != "" {
+		value, err := strconv.Atoi(configured)
+		if err != nil || value < 1 {
+			return 0, fmt.Errorf("SQLITE_BENCHMARK_TIMEOUT_MSが不正です")
+		}
+		maximumMilliseconds = value
+	}
+	if requestedMilliseconds > maximumMilliseconds {
+		requestedMilliseconds = maximumMilliseconds
+	}
+	return time.Duration(requestedMilliseconds) * time.Millisecond, nil
 }
 
 func benchmarkQueryPlan(ctx context.Context, db *sql.DB, query string) ([]string, error) {

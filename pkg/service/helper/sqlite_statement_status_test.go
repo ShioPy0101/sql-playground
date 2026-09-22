@@ -1,6 +1,10 @@
 package helper
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"testing"
+)
 
 func TestMeasureSelectStatementPoC(t *testing.T) {
 	db, databasePath, cleanup, err := OpenTempSQLiteDBWithPath()
@@ -40,4 +44,20 @@ func TestMeasureSelectStatementPoC(t *testing.T) {
 
 	t.Logf("SELECT 1: VM_STEP=%d FULLSCAN_STEP=%d", constant.VMSteps, constant.FullScanSteps)
 	t.Logf("table SELECT: VM_STEP=%d FULLSCAN_STEP=%d", tableScan.VMSteps, tableScan.FullScanSteps)
+}
+
+func TestMeasureSelectStatementHonorsCanceledContext(t *testing.T) {
+	db, databasePath, cleanup, err := OpenTempSQLiteDBWithPath()
+	if err != nil {
+		t.Fatalf("OpenTempSQLiteDBWithPath returned error: %v", err)
+	}
+	defer cleanup()
+	defer db.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = MeasureSelectStatementContext(ctx, databasePath, `SELECT 1`)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want context.Canceled", err)
+	}
 }

@@ -1,0 +1,39 @@
+{
+  "number": 57,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "runOnFailed": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM posts WHERE tenant_id = 42 ORDER BY created_at DESC;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "dataset": {
+      "table": "posts",
+      "columns": [
+        { "name": "id", "expression": "row_number" },
+        { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
+        { "name": "user_id", "expression": "(row_number % 50000) + 1" },
+        { "name": "title", "expression": "printf('post title %d', row_number)" },
+        { "name": "body", "expression": "printf('post body %d', row_number)" },
+        { "name": "created_at", "expression": "printf('2026-%02d-%02d 12:%02d:00', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1, row_number % 60)" }
+      ]
+    }
+  },
+  "slug": "saas-composite-index-posts-timeline",
+  "title": "[複合インデックス][書いてみよう] テナント内の新着投稿を高速化する",
+  "statement": "テナント内の新着投稿一覧を高速化する複合インデックスを作成してください。\n\nposts は id, tenant_id, user_id, title, body, created_at を持ちます。WHERE tenant_id = 42 ORDER BY created_at DESC という検索に合わせ、idx_posts_tenant_created_at を (tenant_id, created_at) の順で作成します。\n\nWHEREで絞る列だけでなく、その後の並び順まで含めてインデックスを設計すると、SQLite内部の追加ソートを避けられることがあります。",
+  "constraints": [
+    { "name": "インデックス名", "value": "idx_posts_tenant_created_at とします" },
+    { "name": "列の順序", "value": "tenant_id, created_at の順にします" },
+    { "name": "対象検索", "value": "テナントで絞り、created_atの降順で並べる検索です" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\n-- tenant_id と created_at の複合インデックスを作成します",
+  "solutionSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\nCREATE INDEX idx_posts_tenant_created_at\nON posts(tenant_id, created_at);",
+  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM pragma_table_info('posts') AS p UNION ALL SELECT 'index', il.name, ii.name, CAST(il.\"unique\" AS TEXT), CAST(ii.seqno + 1 AS TEXT) FROM pragma_index_list('posts') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.name = 'idx_posts_tenant_created_at' ORDER BY check_type, item_name, key_order;",
+  "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,body,TEXT,1,0\ncolumn,created_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,tenant_id,INTEGER,1,0\ncolumn,title,TEXT,1,0\ncolumn,user_id,INTEGER,1,0\nindex,idx_posts_tenant_created_at,tenant_id,0,1\nindex,idx_posts_tenant_created_at,created_at,0,2\n",
+  "tests": [
+    { "name": "複合インデックスの列順確認", "csv": "", "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,body,TEXT,1,0\ncolumn,created_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,tenant_id,INTEGER,1,0\ncolumn,title,TEXT,1,0\ncolumn,user_id,INTEGER,1,0\nindex,idx_posts_tenant_created_at,tenant_id,0,1\nindex,idx_posts_tenant_created_at,created_at,0,2\n" }
+  ]
+}

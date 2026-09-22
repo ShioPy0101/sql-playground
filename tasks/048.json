@@ -1,0 +1,36 @@
+{
+  "number": 48,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM users WHERE email = 'user42@example.com';",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "dataset": {
+      "table": "users",
+      "columns": [
+        { "name": "id", "expression": "row_number" },
+        { "name": "name", "expression": "printf('user-%d', row_number)" },
+        { "name": "email", "expression": "printf('user%d@example.com', row_number)" },
+        { "name": "password_digest", "expression": "printf('digest-%d', row_number)" }
+      ]
+    }
+  },
+  "slug": "saas-create-users-table",
+  "title": "[テーブル設計][書いてみよう] users テーブルを作成する",
+  "statement": "アカウントを保存する users テーブルを作成してください。\n\n列は id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, password_digest TEXT NOT NULL とします。パスワードそのものではなく、安全に変換したダイジェストを password_digest に保存します。\n\nCREATE TABLE、データ型、主キー、NOT NULL を復習しながら、これから育てるサービスの土台を作りましょう。",
+  "constraints": [
+    { "name": "テーブル", "value": "users テーブルを作成します" },
+    { "name": "主キー", "value": "id は INTEGER PRIMARY KEY にします" },
+    { "name": "必須列", "value": "name, email, password_digest は TEXT NOT NULL にします" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT,\n  email TEXT,\n  password_digest TEXT\n);",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT NOT NULL,\n  password_digest TEXT NOT NULL\n);",
+  "checkSql": "SELECT name, UPPER(type) AS type, CAST(\"notnull\" AS TEXT) AS required, CAST(pk AS TEXT) AS primary_key FROM pragma_table_info('users') ORDER BY name;",
+  "expectedCsv": "name,type,required,primary_key\nemail,TEXT,1,0\nid,INTEGER,0,1\nname,TEXT,1,0\npassword_digest,TEXT,1,0\n",
+  "tests": [
+    { "name": "users のスキーマ確認", "csv": "", "expectedCsv": "name,type,required,primary_key\nemail,TEXT,1,0\nid,INTEGER,0,1\nname,TEXT,1,0\npassword_digest,TEXT,1,0\n" }
+  ]
+}

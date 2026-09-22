@@ -1,0 +1,47 @@
+{
+  "number": 52,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT COUNT(*) AS mismatch_count FROM posts AS p JOIN users AS u ON p.user_id = u.id WHERE p.tenant_id <> u.tenant_id;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, name TEXT NOT NULL); CREATE TABLE posts (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id));",
+    "datasets": [
+      {
+        "table": "users",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
+          { "name": "name", "expression": "printf('user-%d', row_number)" }
+        ]
+      },
+      {
+        "table": "posts",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
+          { "name": "user_id", "expression": "((row_number + 49) % 100) + 1" },
+          { "name": "body", "expression": "printf('post body %d', row_number)" }
+        ]
+      }
+    ]
+  },
+  "slug": "saas-tenant-id-alone-is-not-enough",
+  "title": "[マルチテナント][確かめよう] tenant_id だけでは防げない",
+  "statement": "tenant_id を持つだけでは、別テナントのユーザーを投稿者に指定できてしまうことを確かめます。\n\nusers.id だけを参照する外部キーでは、投稿とユーザーの tenant_id が同じかまでは検証されません。用意されたSQLは、tenant_id = 1 の投稿に tenant_id = 2 のユーザーを設定し、その不整合な組み合わせを表示します。\n\nSQLを読み、実行・提出して結果を確認してください。",
+  "constraints": [
+    { "name": "外部キー", "value": "posts.user_id は users.id だけを参照します" },
+    { "name": "確認内容", "value": "投稿と投稿者の tenant_id が異なる行を作成します" },
+    { "name": "目的", "value": "tenant_id を持つだけでは境界を保証できないことを確認します" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL,\n  FOREIGN KEY (user_id) REFERENCES users(id)\n);\n\nINSERT INTO users (id, tenant_id, name) VALUES\n  (1, 1, '吉田東洋'),\n  (6, 2, '西郷隆盛');\n\n-- tenant_id = 1 の投稿から tenant_id = 2 のユーザーを参照できてしまいます\nINSERT INTO posts (id, tenant_id, user_id, body)\nVALUES (1, 1, 6, 'テナント境界を越えた投稿');",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL,\n  FOREIGN KEY (user_id) REFERENCES users(id)\n);\n\nINSERT INTO users (id, tenant_id, name) VALUES\n  (1, 1, '吉田東洋'),\n  (6, 2, '西郷隆盛');\n\nINSERT INTO posts (id, tenant_id, user_id, body)\nVALUES (1, 1, 6, 'テナント境界を越えた投稿');",
+  "checkSql": "SELECT posts.id AS post_id, posts.tenant_id AS post_tenant_id, posts.user_id, users.tenant_id AS user_tenant_id, users.name AS user_name FROM posts JOIN users ON users.id = posts.user_id WHERE posts.tenant_id <> users.tenant_id;",
+  "expectedCsv": "post_id,post_tenant_id,user_id,user_tenant_id,user_name\n1,1,6,2,西郷隆盛\n",
+  "tests": [
+    { "name": "テナント境界を越えた参照", "csv": "", "expectedCsv": "post_id,post_tenant_id,user_id,user_tenant_id,user_name\n1,1,6,2,西郷隆盛\n" }
+  ]
+}

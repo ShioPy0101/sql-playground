@@ -1,0 +1,44 @@
+{
+  "number": 49,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM posts WHERE user_id = 42;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "datasets": [
+      {
+        "table": "users",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "name", "expression": "printf('user-%d', row_number)" }
+        ]
+      },
+      {
+        "table": "posts",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "user_id", "expression": "(row_number % 100) + 1" },
+          { "name": "body", "expression": "printf('post body %d', row_number)" }
+        ]
+      }
+    ]
+  },
+  "slug": "saas-link-posts-to-users",
+  "title": "[外部キー][書いてみよう] 投稿をユーザーに紐付ける",
+  "statement": "users と posts テーブルを作成し、投稿をユーザーに紐付けてください。\n\nusers は id INTEGER PRIMARY KEY, name TEXT NOT NULL を持ちます。posts は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL を持ち、user_id から users(id) への外部キーを設定します。\n\n外部キーにより、存在するユーザーだけを投稿者として指定できる構造を作ります。",
+  "constraints": [
+    { "name": "作成するテーブル", "value": "users と posts を作成します" },
+    { "name": "外部キー", "value": "posts.user_id は users.id を参照します" },
+    { "name": "必須列", "value": "users.name と posts.user_id, posts.body は NOT NULL にします" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  user_id INTEGER,\n  body TEXT NOT NULL\n);",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL,\n  FOREIGN KEY (user_id) REFERENCES users(id)\n);",
+  "checkSql": "SELECT 'column' AS check_type, m.name AS table_name, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM sqlite_master AS m JOIN pragma_table_info(m.name) AS p WHERE m.type = 'table' AND m.name IN ('users', 'posts') UNION ALL SELECT 'foreign_key', 'posts', f.\"from\", f.\"table\" || '.' || f.\"to\", '', '' FROM pragma_foreign_key_list('posts') AS f ORDER BY check_type, table_name, item_name;",
+  "expectedCsv": "check_type,table_name,item_name,detail,required,key_order\ncolumn,posts,body,TEXT,1,0\ncolumn,posts,id,INTEGER,0,1\ncolumn,posts,user_id,INTEGER,1,0\ncolumn,users,id,INTEGER,0,1\ncolumn,users,name,TEXT,1,0\nforeign_key,posts,user_id,users.id,,\n",
+  "tests": [
+    { "name": "posts の外部キー確認", "csv": "", "expectedCsv": "check_type,table_name,item_name,detail,required,key_order\ncolumn,posts,body,TEXT,1,0\ncolumn,posts,id,INTEGER,0,1\ncolumn,posts,user_id,INTEGER,1,0\ncolumn,users,id,INTEGER,0,1\ncolumn,users,name,TEXT,1,0\nforeign_key,posts,user_id,users.id,,\n" }
+  ]
+}

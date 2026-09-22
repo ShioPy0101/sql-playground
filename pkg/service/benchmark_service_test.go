@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -167,6 +168,40 @@ func TestTask45BenchmarkWithoutIndexesShowsFullScan(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(result.QueryPlan, "\n"), "SCAN orders") {
 		t.Fatalf("plan = %#v, want full table scan", result.QueryPlan)
+	}
+}
+
+func TestSaaSCurriculumBenchmarksRunAllStages(t *testing.T) {
+	reports := make(map[int]BenchmarkReport)
+	for number := 48; number <= 57; number++ {
+		task, err := LoadTaskDefinition(fmt.Sprintf("%d", number))
+		if err != nil {
+			t.Fatalf("LoadTaskDefinition(%d) returned error: %v", number, err)
+		}
+		if task.Benchmark == nil || !task.Benchmark.Enabled {
+			t.Fatalf("task %d has no enabled benchmark", number)
+		}
+		report, err := NewBenchmarkService().Run(task.Mode, *task.Benchmark, task.SolutionSQL)
+		if err != nil {
+			t.Fatalf("task %d benchmark returned error: %v", number, err)
+		}
+		if report.Status != "completed" || len(report.Results) != 4 {
+			t.Fatalf("task %d report = %#v, want four completed stages", number, report)
+		}
+		reports[number] = report
+	}
+
+	withoutIndex := reports[51].Results[3]
+	withIndex := reports[56].Results[3]
+	if withoutIndex.FullScanSteps == 0 || withIndex.FullScanSteps != 0 {
+		t.Fatalf("tenant search FULLSCAN before=%d after=%d", withoutIndex.FullScanSteps, withIndex.FullScanSteps)
+	}
+	if !strings.Contains(strings.Join(withIndex.QueryPlan, "\n"), "USING INDEX idx_posts_tenant_id") {
+		t.Fatalf("task 56 plan = %#v, want tenant index", withIndex.QueryPlan)
+	}
+	composite := reports[57].Results[3]
+	if composite.SortCount != 0 || !strings.Contains(strings.Join(composite.QueryPlan, "\n"), "idx_posts_tenant_created_at") {
+		t.Fatalf("task 57 metrics = %#v, want composite index without sort", composite)
 	}
 }
 

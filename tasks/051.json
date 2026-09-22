@@ -1,0 +1,46 @@
+{
+  "number": 51,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM posts WHERE tenant_id = 42;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "datasets": [
+      {
+        "table": "users",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
+          { "name": "name", "expression": "printf('user-%d', row_number)" }
+        ]
+      },
+      {
+        "table": "posts",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
+          { "name": "user_id", "expression": "row_number" },
+          { "name": "body", "expression": "printf('post body %d', row_number)" }
+        ]
+      }
+    ]
+  },
+  "slug": "saas-add-tenant-id",
+  "title": "[マルチテナント][書いてみよう] データに tenant_id を持たせる",
+  "statement": "users と posts の両方に tenant_id を持たせ、各データがどのテナントに属するか識別できるテーブルを作成してください。\n\nusers は id, tenant_id, name、posts は id, tenant_id, user_id, body を持ちます。id はそれぞれ INTEGER PRIMARY KEY、それ以外の列はすべて NOT NULL とします。\n\ntenant_id を保存することで、同じテーブルに複数組織のデータを置く準備ができます。",
+  "constraints": [
+    { "name": "users", "value": "id, tenant_id, name を定義します" },
+    { "name": "posts", "value": "id, tenant_id, user_id, body を定義します" },
+    { "name": "テナント列", "value": "両テーブルの tenant_id は INTEGER NOT NULL にします" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  -- tenant_id を追加します\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  -- tenant_id を追加します\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL\n);",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL\n);",
+  "checkSql": "SELECT m.name AS table_name, p.name AS column_name, UPPER(p.type) AS type, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS primary_key FROM sqlite_master AS m JOIN pragma_table_info(m.name) AS p WHERE m.type = 'table' AND m.name IN ('users', 'posts') ORDER BY table_name, column_name;",
+  "expectedCsv": "table_name,column_name,type,required,primary_key\nposts,body,TEXT,1,0\nposts,id,INTEGER,0,1\nposts,tenant_id,INTEGER,1,0\nposts,user_id,INTEGER,1,0\nusers,id,INTEGER,0,1\nusers,name,TEXT,1,0\nusers,tenant_id,INTEGER,1,0\n",
+  "tests": [
+    { "name": "tenant_id を含むスキーマ確認", "csv": "", "expectedCsv": "table_name,column_name,type,required,primary_key\nposts,body,TEXT,1,0\nposts,id,INTEGER,0,1\nposts,tenant_id,INTEGER,1,0\nposts,user_id,INTEGER,1,0\nusers,id,INTEGER,0,1\nusers,name,TEXT,1,0\nusers,tenant_id,INTEGER,1,0\n" }
+  ]
+}

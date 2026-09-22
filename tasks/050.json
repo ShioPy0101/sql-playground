@@ -1,0 +1,45 @@
+{
+  "number": 50,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT posts.id, users.name, posts.body FROM posts JOIN users ON users.id = posts.user_id WHERE users.id = 42;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id));",
+    "datasets": [
+      {
+        "table": "users",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "name", "expression": "printf('user-%d', row_number)" }
+        ]
+      },
+      {
+        "table": "posts",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "user_id", "expression": "(row_number % 100) + 1" },
+          { "name": "body", "expression": "printf('post body %d', row_number)" }
+        ]
+      }
+    ]
+  },
+  "slug": "saas-join-posts-and-users",
+  "title": "[JOIN][書いてみよう] 投稿とユーザー名を一緒に取得する",
+  "statement": "users と posts を JOIN し、投稿ID、投稿者名、本文を表示してください。\n\n出力する列は post_id, user_name, body です。posts.user_id と users.id を結合し、投稿IDの昇順で並べます。\n\n外部キーで表現した関連を、JOINで実際に取得してみましょう。",
+  "constraints": [
+    { "name": "結合条件", "value": "posts.user_id = users.id で結合します" },
+    { "name": "出力列", "value": "post_id, user_name, body の順で表示します" },
+    { "name": "並び順", "value": "posts.id の昇順にします" }
+  ],
+  "csv": "[users]\nid,name\n1,吉田東洋\n2,坂本龍馬\n6,西郷隆盛\n\n[posts]\nid,user_id,body\n1,2,藩政について\n2,1,改革について\n3,6,新しい国づくり",
+  "starterSql": "SELECT\n  posts.id AS post_id,\n  -- 投稿者名を user_name として表示します\n  posts.body\nFROM posts\nJOIN users\n  ON -- 結合条件を書きます\nORDER BY CAST(posts.id AS INTEGER) ASC;",
+  "solutionSql": "SELECT\n  posts.id AS post_id,\n  users.name AS user_name,\n  posts.body\nFROM posts\nJOIN users\n  ON posts.user_id = users.id\nORDER BY CAST(posts.id AS INTEGER) ASC;",
+  "expectedCsv": "post_id,user_name,body\n1,坂本龍馬,藩政について\n2,吉田東洋,改革について\n3,西郷隆盛,新しい国づくり\n",
+  "tests": [
+    { "name": "複数ユーザーの投稿", "csv": "[users]\nid,name\n1,吉田東洋\n2,坂本龍馬\n6,西郷隆盛\n\n[posts]\nid,user_id,body\n1,2,藩政について\n2,1,改革について\n3,6,新しい国づくり", "expectedCsv": "post_id,user_name,body\n1,坂本龍馬,藩政について\n2,吉田東洋,改革について\n3,西郷隆盛,新しい国づくり\n" },
+    { "name": "投稿順が前後するデータ", "csv": "[users]\nid,name\n10,Aoi\n20,Ren\n\n[posts]\nid,user_id,body\n3,10,三件目\n1,20,一件目", "expectedCsv": "post_id,user_name,body\n1,Ren,一件目\n3,Aoi,三件目\n" }
+  ]
+}

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
 
 func TestTaskServiceSubmitComparesAllCases(t *testing.T) {
@@ -559,6 +561,29 @@ func TestTaskServiceBundledTaskSolutionsPass(t *testing.T) {
 		if !result.Passed {
 			t.Fatalf("solution for task %s did not pass: %#v", taskNumber, result)
 		}
+	}
+}
+
+func TestTask53SolutionRejectsCrossTenantReference(t *testing.T) {
+	task, err := LoadTaskDefinition("53")
+	if err != nil {
+		t.Fatalf("LoadTaskDefinition returned error: %v", err)
+	}
+	db, cleanup, err := helper.OpenTempSQLiteDB()
+	if err != nil {
+		t.Fatalf("OpenTempSQLiteDB returned error: %v", err)
+	}
+	defer cleanup()
+	defer db.Close()
+
+	if _, err := db.Exec(task.SolutionSQL); err != nil {
+		t.Fatalf("execute task solution: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO users (tenant_id, id, name) VALUES (1, 1, 'tenant-1'), (2, 2, 'tenant-2')`); err != nil {
+		t.Fatalf("insert users: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO posts (id, tenant_id, user_id, body) VALUES (1, 1, 2, 'cross tenant')`); err == nil {
+		t.Fatal("cross-tenant post was accepted, want foreign-key failure")
 	}
 }
 

@@ -1,0 +1,47 @@
+{
+  "number": 54,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM magic_link_authentications WHERE user_id = 42 AND used_at IS NULL;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "datasets": [
+      {
+        "table": "users",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "name", "expression": "printf('user-%d', row_number)" }
+        ]
+      },
+      {
+        "table": "magic_link_authentications",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "user_id", "expression": "(row_number % 100) + 1" },
+          { "name": "token_digest", "expression": "printf('token-digest-%d', row_number)" },
+          { "name": "expires_at", "expression": "printf('2026-12-%02d 12:00:00', ((row_number - 1) % 28) + 1)" },
+          { "name": "used_at", "expression": "CASE WHEN row_number % 3 = 0 THEN '2026-09-01 12:00:00' ELSE NULL END" },
+          { "name": "created_at", "expression": "printf('2026-09-%02d 10:00:00', ((row_number - 1) % 28) + 1)" }
+        ]
+      }
+    ]
+  },
+  "slug": "saas-create-magic-link-authentications",
+  "title": "[認証][書いてみよう] マジックリンク認証の状態を保存する",
+  "statement": "users と magic_link_authentications テーブルを作成してください。\n\nmagic_link_authentications は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, token_digest TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL を持ち、user_id は users(id) を参照します。\n\nメールへ送るトークンそのものではなくダイジェスト、有効期限、使用済み時刻を保存する設計を学びます。used_at は未使用の間NULLを許可します。",
+  "constraints": [
+    { "name": "認証情報", "value": "token_digest, expires_at, used_at, created_at を定義します" },
+    { "name": "外部キー", "value": "user_id は users.id を参照します" },
+    { "name": "NULL", "value": "used_at だけはNULLを許可します" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE magic_link_authentications (\n  id INTEGER PRIMARY KEY,\n  user_id INTEGER NOT NULL,\n  token_digest TEXT NOT NULL,\n  expires_at TEXT NOT NULL,\n  used_at TEXT,\n  created_at TEXT NOT NULL\n);",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE magic_link_authentications (\n  id INTEGER PRIMARY KEY,\n  user_id INTEGER NOT NULL,\n  token_digest TEXT NOT NULL,\n  expires_at TEXT NOT NULL,\n  used_at TEXT,\n  created_at TEXT NOT NULL,\n  FOREIGN KEY (user_id) REFERENCES users(id)\n);",
+  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM pragma_table_info('magic_link_authentications') AS p UNION ALL SELECT 'foreign_key', f.\"from\", f.\"table\" || '.' || f.\"to\", '', '' FROM pragma_foreign_key_list('magic_link_authentications') AS f ORDER BY check_type, item_name;",
+  "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,created_at,TEXT,1,0\ncolumn,expires_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,token_digest,TEXT,1,0\ncolumn,used_at,TEXT,0,0\ncolumn,user_id,INTEGER,1,0\nforeign_key,user_id,users.id,,\n",
+  "tests": [
+    { "name": "Magic Link認証スキーマ確認", "csv": "", "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,created_at,TEXT,1,0\ncolumn,expires_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,token_digest,TEXT,1,0\ncolumn,used_at,TEXT,0,0\ncolumn,user_id,INTEGER,1,0\nforeign_key,user_id,users.id,,\n" }
+  ]
+}

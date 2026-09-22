@@ -1,0 +1,39 @@
+{
+  "number": 56,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "runOnFailed": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM posts WHERE tenant_id = 42;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "dataset": {
+      "table": "posts",
+      "columns": [
+        { "name": "id", "expression": "row_number" },
+        { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
+        { "name": "user_id", "expression": "(row_number % 50000) + 1" },
+        { "name": "title", "expression": "printf('post title %d', row_number)" },
+        { "name": "body", "expression": "printf('post body %d', row_number)" },
+        { "name": "created_at", "expression": "printf('2026-%02d-%02d 12:%02d:00', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1, row_number % 60)" }
+      ]
+    }
+  },
+  "slug": "saas-index-posts-tenant-id",
+  "title": "[インデックス][書いてみよう] テナント内の投稿検索を高速化する",
+  "statement": "posts テーブルを作成し、tenant_id の検索を高速化するインデックスを追加してください。\n\nposts は id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL を持ちます。インデックス名は idx_posts_tenant_id としてください。\n\nマルチテナントのアプリケーションでは tenant_id がほぼすべての検索条件に入ります。問題51と同じ検索を、インデックス追加後の実行計画と全表走査ステップ数で比較できます。",
+  "constraints": [
+    { "name": "テーブル", "value": "指定された6列を持つ posts を作成します" },
+    { "name": "インデックス名", "value": "idx_posts_tenant_id とします" },
+    { "name": "対象列", "value": "tenant_id だけを指定します" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\n-- tenant_id のインデックスを作成します",
+  "solutionSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\nCREATE INDEX idx_posts_tenant_id\nON posts(tenant_id);",
+  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM pragma_table_info('posts') AS p UNION ALL SELECT 'index', il.name, ii.name, CAST(il.\"unique\" AS TEXT), CAST(ii.seqno + 1 AS TEXT) FROM pragma_index_list('posts') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.name = 'idx_posts_tenant_id' ORDER BY check_type, item_name;",
+  "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,body,TEXT,1,0\ncolumn,created_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,tenant_id,INTEGER,1,0\ncolumn,title,TEXT,1,0\ncolumn,user_id,INTEGER,1,0\nindex,idx_posts_tenant_id,tenant_id,0,1\n",
+  "tests": [
+    { "name": "tenant_idインデックス確認", "csv": "", "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,body,TEXT,1,0\ncolumn,created_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,tenant_id,INTEGER,1,0\ncolumn,title,TEXT,1,0\ncolumn,user_id,INTEGER,1,0\nindex,idx_posts_tenant_id,tenant_id,0,1\n" }
+  ]
+}

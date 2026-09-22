@@ -1,0 +1,48 @@
+{
+  "number": 55,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "fixed-query",
+    "query": "SELECT * FROM otp_authentications WHERE user_id = 42 ORDER BY created_at DESC LIMIT 1;",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "datasets": [
+      {
+        "table": "users",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "name", "expression": "printf('user-%d', row_number)" }
+        ]
+      },
+      {
+        "table": "otp_authentications",
+        "columns": [
+          { "name": "id", "expression": "row_number" },
+          { "name": "user_id", "expression": "(row_number % 100) + 1" },
+          { "name": "code_digest", "expression": "printf('otp-digest-%d', row_number)" },
+          { "name": "expires_at", "expression": "printf('2026-12-%02d 12:00:00', ((row_number - 1) % 28) + 1)" },
+          { "name": "used_at", "expression": "CASE WHEN row_number % 3 = 0 THEN '2026-09-01 12:00:00' ELSE NULL END" },
+          { "name": "attempt_count", "expression": "row_number % 4" },
+          { "name": "created_at", "expression": "printf('2026-09-%02d 10:%02d:00', ((row_number - 1) % 28) + 1, row_number % 60)" }
+        ]
+      }
+    ]
+  },
+  "slug": "saas-create-otp-authentications",
+  "title": "[認証][書いてみよう] Email OTP の状態を保存する",
+  "statement": "users と otp_authentications テーブルを作成してください。\n\notp_authentications は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, code_digest TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL を持ち、user_id は users(id) を参照します。\n\n利用者がコードを入力するOTPでは、Magic Linkと共通の期限・使用済み状態に加えて、総当たりを抑えるための試行回数も管理します。",
+  "constraints": [
+    { "name": "OTP情報", "value": "code_digest, expires_at, used_at, created_at を定義します" },
+    { "name": "試行回数", "value": "attempt_count は INTEGER NOT NULL DEFAULT 0 にします" },
+    { "name": "外部キー", "value": "user_id は users.id を参照します" }
+  ],
+  "csv": "",
+  "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE otp_authentications (\n  id INTEGER PRIMARY KEY,\n  user_id INTEGER NOT NULL,\n  code_digest TEXT NOT NULL,\n  expires_at TEXT NOT NULL,\n  used_at TEXT,\n  attempt_count INTEGER,\n  created_at TEXT NOT NULL\n);",
+  "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE otp_authentications (\n  id INTEGER PRIMARY KEY,\n  user_id INTEGER NOT NULL,\n  code_digest TEXT NOT NULL,\n  expires_at TEXT NOT NULL,\n  used_at TEXT,\n  attempt_count INTEGER NOT NULL DEFAULT 0,\n  created_at TEXT NOT NULL,\n  FOREIGN KEY (user_id) REFERENCES users(id)\n);",
+  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CASE WHEN p.dflt_value IS NULL THEN '' ELSE p.dflt_value END AS default_value FROM pragma_table_info('otp_authentications') AS p UNION ALL SELECT 'foreign_key', f.\"from\", f.\"table\" || '.' || f.\"to\", '', '' FROM pragma_foreign_key_list('otp_authentications') AS f ORDER BY check_type, item_name;",
+  "expectedCsv": "check_type,item_name,detail,required,default_value\ncolumn,attempt_count,INTEGER,1,0\ncolumn,code_digest,TEXT,1,\ncolumn,created_at,TEXT,1,\ncolumn,expires_at,TEXT,1,\ncolumn,id,INTEGER,0,\ncolumn,used_at,TEXT,0,\ncolumn,user_id,INTEGER,1,\nforeign_key,user_id,users.id,,\n",
+  "tests": [
+    { "name": "OTP認証スキーマ確認", "csv": "", "expectedCsv": "check_type,item_name,detail,required,default_value\ncolumn,attempt_count,INTEGER,1,0\ncolumn,code_digest,TEXT,1,\ncolumn,created_at,TEXT,1,\ncolumn,expires_at,TEXT,1,\ncolumn,id,INTEGER,0,\ncolumn,used_at,TEXT,0,\ncolumn,user_id,INTEGER,1,\nforeign_key,user_id,users.id,,\n" }
+  ]
+}

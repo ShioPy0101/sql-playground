@@ -7,12 +7,15 @@ import {
   fetchTask,
   fetchTasks,
   fetchTaskSubmissions,
+  benchmarkTask,
   submitTask,
   submitEventTask,
   Task,
   TaskSubmission,
   TaskSubmitResult
 } from "../api/client";
+import type { BenchmarkReport, ExecutionMetrics } from "../api/client";
+import { BenchmarkPanel } from "../components/BenchmarkPanel";
 import { EditorPanel } from "../components/EditorPanel";
 import { JudgePanel } from "../components/JudgePanel";
 import { ResultPanel } from "../components/ResultPanel";
@@ -43,7 +46,10 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
   const [taskNavigation, setTaskNavigation] = useState<TaskNavigation>({ total: 0 });
   const [query, setQuery] = useState("");
   const [result, setResult] = useState("");
+  const [metrics, setMetrics] = useState<ExecutionMetrics | null>(null);
   const [judgeResult, setJudgeResult] = useState<TaskSubmitResult | null>(null);
+  const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null);
+  const [benchmarkError, setBenchmarkError] = useState("");
   const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
   const [historyError, setHistoryError] = useState("");
@@ -51,13 +57,17 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
   const [showSolution, setShowSolution] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBenchmarking, setIsBenchmarking] = useState(false);
 
   useEffect(() => {
     let ignore = false;
     setError("");
     setTask(null);
     setJudgeResult(null);
+    setBenchmarkReport(null);
+    setBenchmarkError("");
     setResult("");
+    setMetrics(null);
     setSubmissions([]);
     setShowSolution(false);
 
@@ -165,9 +175,11 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
     try {
       const payload = await executeSQL(task.csv, query, task.checkSql);
       setResult(payload.csv);
+      setMetrics(payload.metrics ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "SQL の実行に失敗しました");
       setResult("");
+      setMetrics(null);
     } finally {
       setIsRunning(false);
     }
@@ -180,6 +192,19 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
     try {
       const payload = eventSlug ? await submitEventTask(eventSlug, number, query) : await submitTask(number, query);
       setJudgeResult(payload);
+      setBenchmarkReport(null);
+      setBenchmarkError("");
+      if (payload.passed && task?.benchmark?.enabled) {
+        setIsBenchmarking(true);
+        void benchmarkTask(number, query)
+          .then(setBenchmarkReport)
+          .catch((benchmarkFailure) => {
+            setBenchmarkError(
+              benchmarkFailure instanceof Error ? benchmarkFailure.message : "性能計測に失敗しました"
+            );
+          })
+          .finally(() => setIsBenchmarking(false));
+      }
       const history = eventSlug
         ? await fetchEventTaskSubmissions(eventSlug, number)
         : await fetchTaskSubmissions(number);
@@ -198,7 +223,10 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
     }
     setQuery(task.starterSql);
     setResult("");
+    setMetrics(null);
     setJudgeResult(null);
+    setBenchmarkReport(null);
+    setBenchmarkError("");
     setError("");
   }
 
@@ -300,8 +328,14 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
             <pre className="sql-preview">{task.solutionSql || "想定解答が登録されていません。"}</pre>
           </section>
         ) : null}
-        <ResultPanel result={result} error={error} emptyText="実行するとサンプルに対する結果を確認できます。" />
+        <ResultPanel
+          result={result}
+          error={error}
+          metrics={metrics}
+          emptyText="実行するとサンプルに対する結果を確認できます。"
+        />
         <JudgePanel result={judgeResult} />
+        <BenchmarkPanel report={benchmarkReport} error={benchmarkError} running={isBenchmarking} />
         <section className="submission-history" aria-label="解答履歴">
           <div className="panel-heading">
             <h2>解答履歴</h2>

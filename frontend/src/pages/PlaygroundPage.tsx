@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { executeSQL } from "../api/client";
-import type { InputFormat } from "../api/client";
+import type { ExecutionMetrics, InputFormat } from "../api/client";
 import { EditorPanel } from "../components/EditorPanel";
 import { ResultPanel } from "../components/ResultPanel";
 import { formatTableLabel } from "../utils/csv";
@@ -56,6 +56,7 @@ export function PlaygroundPage() {
   const [query, setQuery] = useState(sampleQuery);
   const [dialect, setDialect] = useState(defaultDialect);
   const [result, setResult] = useState("");
+  const [metrics, setMetrics] = useState<ExecutionMetrics | null>(null);
   const [error, setError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [isShareStateReady, setIsShareStateReady] = useState(false);
@@ -165,9 +166,11 @@ export function PlaygroundPage() {
       const input = inputFormat === "csv" ? csv : inputSQL;
       const payload = await executeSQL(input, query, "", inputFormat);
       setResult(payload.csv);
+      setMetrics(payload.metrics ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "予期しないエラーが発生しました");
       setResult("");
+      setMetrics(null);
     } finally {
       setIsRunning(false);
     }
@@ -215,7 +218,12 @@ export function PlaygroundPage() {
           ariaLabel="SQLクエリ"
           onChange={setQuery}
         />
-        <ResultPanel result={result} error={error} emptyText="入力データと SQL を編集して実行してください。" />
+        <ResultPanel
+          result={result}
+          error={error}
+          metrics={metrics}
+          emptyText="入力データと SQL を編集して実行してください。"
+        />
       </form>
     </main>
   );

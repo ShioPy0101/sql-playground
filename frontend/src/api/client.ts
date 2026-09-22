@@ -1,5 +1,26 @@
 export type ExecuteResponse = {
   csv: string;
+  metrics?: ExecutionMetrics;
+};
+
+export type StatementMetrics = {
+  statementIndex: number;
+  statement: string;
+  durationMs: number;
+  vmSteps: number | null;
+  fullScanSteps: number | null;
+  sortOperations: number | null;
+  autoIndexRows: number | null;
+  queryPlan: string[];
+};
+
+export type ExecutionMetrics = {
+  durationMs: number;
+  vmSteps: number | null;
+  fullScanSteps: number | null;
+  sortOperations: number | null;
+  autoIndexRows: number | null;
+  statements: StatementMetrics[];
 };
 
 export type InputFormat = "csv" | "sql";
@@ -11,6 +32,8 @@ export type Constraint = {
 
 export type Task = {
   number: number;
+  mode?: "sql" | "ddl";
+  benchmark?: BenchmarkConfig;
   slug: string;
   title: string;
   statement: string;
@@ -24,6 +47,32 @@ export type Task = {
   savedQuery?: string;
   answered: boolean;
   solved: boolean;
+};
+
+export type BenchmarkConfig = {
+  enabled: boolean;
+  target: "submission" | "fixed-query";
+  query?: string;
+  rowCounts: number[];
+};
+
+export type BenchmarkResult = {
+  rowCount: number;
+  executionTimeMs: number;
+  vmSteps: number;
+  fullScanSteps: number;
+  sortCount: number;
+  autoIndexRows: number;
+  queryPlan: string[];
+  databaseSizeBytes: number;
+  dataGenerationMs: number;
+};
+
+export type BenchmarkReport = {
+  status: "completed" | "failed";
+  query: string;
+  results: BenchmarkResult[];
+  error?: string;
 };
 
 export type TaskSummary = {
@@ -167,6 +216,10 @@ export async function fetchTasks() {
 
 export async function submitTask(number: string, query: string) {
   return postJSON<TaskSubmitResult>(`/api/tasks/${number}/submit`, { query });
+}
+
+export async function benchmarkTask(number: string, query: string) {
+  return postJSON<BenchmarkReport>(`/api/tasks/${number}/benchmark`, { query });
 }
 
 export async function submitEventTask(slug: string, number: string, query: string) {

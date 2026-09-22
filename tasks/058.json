@@ -1,39 +1,20 @@
 {
   "number": 58,
   "mode": "ddl",
-  "benchmark": {
-    "enabled": true,
-    "runOnFailed": true,
-    "timeoutMs": 5000,
-    "target": "fixed-query",
-    "query": "SELECT * FROM posts WHERE tenant_id = 42 ORDER BY created_at DESC;",
-    "rowCounts": [1000, 10000, 50000, 100000],
-    "dataset": {
-      "table": "posts",
-      "columns": [
-        { "name": "id", "type": "INTEGER", "expression": "row_number" },
-        { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
-        { "name": "user_id", "type": "INTEGER", "expression": "(row_number % 50000) + 1" },
-        { "name": "title", "type": "TEXT", "expression": "printf('post title %d', row_number)" },
-        { "name": "body", "type": "TEXT", "expression": "printf('post body %d', row_number)" },
-        { "name": "created_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d 12:%02d:00', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1, row_number % 60)" }
-      ]
-    }
-  },
-  "slug": "saas-composite-index-posts-timeline",
-  "title": "[複合インデックス][書いてみよう] テナント内の新着投稿を高速化する",
-  "statement": "テナント内の新着投稿一覧に使う複合インデックスを作成してください。\n\nposts は id, tenant_id, user_id, title, body, created_at を持ちます。WHERE tenant_id = 42 ORDER BY created_at DESC に合わせ、idx_posts_tenant_created_at を (tenant_id, created_at) の順で作成します。",
+  "slug": "saas-avoid-over-indexing",
+  "title": "[インデックス][考えてみよう] インデックスは多いほどよい？",
+  "statement": "投稿一覧で使う検索は、テナントで絞って新しい順に並べる処理です。この検索に必要なインデックスだけを作成してください。\n\nposts に idx_posts_tenant_created_at (tenant_id, created_at) を1本だけ作ります。user_id, title, body の個別インデックスは追加しません。",
   "constraints": [
-    { "name": "インデックス名", "value": "idx_posts_tenant_created_at とします" },
+    { "name": "作成するインデックス", "value": "idx_posts_tenant_created_at だけを作成します" },
     { "name": "列の順序", "value": "tenant_id, created_at の順にします" },
-    { "name": "対象検索", "value": "テナントで絞り、created_atの降順で並べる検索です" }
+    { "name": "不要なインデックス", "value": "user_id, title, body の個別インデックスは作成しません" }
   ],
   "csv": "",
-  "starterSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\n-- tenant_id と created_at の複合インデックスを作成します",
+  "starterSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\n-- 検索要件に必要なインデックスだけを作成します",
   "solutionSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\nCREATE INDEX idx_posts_tenant_created_at\nON posts(tenant_id, created_at);",
-  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM pragma_table_info('posts') AS p UNION ALL SELECT 'index', il.name, ii.name, CAST(il.\"unique\" AS TEXT), CAST(ii.seqno + 1 AS TEXT) FROM pragma_index_list('posts') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.name = 'idx_posts_tenant_created_at' ORDER BY check_type, item_name, key_order;",
-  "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,body,TEXT,1,0\ncolumn,created_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,tenant_id,INTEGER,1,0\ncolumn,title,TEXT,1,0\ncolumn,user_id,INTEGER,1,0\nindex,idx_posts_tenant_created_at,tenant_id,0,1\nindex,idx_posts_tenant_created_at,created_at,0,2\n",
+  "checkSql": "SELECT il.name AS index_name, ii.name AS column_name, CAST(ii.seqno + 1 AS TEXT) AS column_order, CAST(il.\"unique\" AS TEXT) AS is_unique FROM pragma_index_list('posts') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.origin = 'c' ORDER BY index_name, column_order;",
+  "expectedCsv": "index_name,column_name,column_order,is_unique\nidx_posts_tenant_created_at,tenant_id,1,0\nidx_posts_tenant_created_at,created_at,2,0\n",
   "tests": [
-    { "name": "複合インデックスの列順確認", "csv": "", "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,body,TEXT,1,0\ncolumn,created_at,TEXT,1,0\ncolumn,id,INTEGER,0,1\ncolumn,tenant_id,INTEGER,1,0\ncolumn,title,TEXT,1,0\ncolumn,user_id,INTEGER,1,0\nindex,idx_posts_tenant_created_at,tenant_id,0,1\nindex,idx_posts_tenant_created_at,created_at,0,2\n" }
+    { "name": "必要なインデックスだけを確認", "csv": "", "expectedCsv": "index_name,column_name,column_order,is_unique\nidx_posts_tenant_created_at,tenant_id,1,0\nidx_posts_tenant_created_at,created_at,2,0\n" }
   ]
 }

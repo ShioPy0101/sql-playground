@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
@@ -584,6 +585,25 @@ func TestTask53SolutionRejectsCrossTenantReference(t *testing.T) {
 	}
 	if _, err := db.Exec(`INSERT INTO posts (id, tenant_id, user_id, body) VALUES (1, 1, 2, 'cross tenant')`); err == nil {
 		t.Fatal("cross-tenant post was accepted, want foreign-key failure")
+	}
+}
+
+func TestTask50UsesTypedSQLInputWithoutCast(t *testing.T) {
+	task, err := LoadTaskDefinition("50")
+	if err != nil {
+		t.Fatalf("LoadTaskDefinition returned error: %v", err)
+	}
+	if task.InputType != helper.InputFormatSQL || strings.Contains(strings.ToUpper(task.SolutionSQL), "CAST(") {
+		t.Fatalf("task 50 inputType = %q, solution = %q", task.InputType, task.SolutionSQL)
+	}
+
+	service := newTestTaskService(t)
+	result, err := service.Submit("50", task.SolutionSQL)
+	if err != nil {
+		t.Fatalf("Submit returned error: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("typed SQL input solution did not pass: %#v", result)
 	}
 }
 

@@ -7,23 +7,22 @@
     "target": "fixed-query",
     "query": "SELECT COUNT(*) AS mismatch_count FROM posts AS p JOIN users AS u ON p.user_id = u.id WHERE p.tenant_id <> u.tenant_id;",
     "rowCounts": [1000, 10000, 50000, 100000],
-    "schemaSql": "CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, name TEXT NOT NULL); CREATE TABLE posts (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id));",
     "datasets": [
       {
         "table": "users",
         "columns": [
-          { "name": "id", "expression": "row_number" },
-          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
-          { "name": "name", "expression": "printf('user-%d', row_number)" }
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+          { "name": "name", "type": "TEXT", "expression": "printf('user-%d', row_number)" }
         ]
       },
       {
         "table": "posts",
         "columns": [
-          { "name": "id", "expression": "row_number" },
-          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
-          { "name": "user_id", "expression": "((row_number + 49) % 100) + 1" },
-          { "name": "body", "expression": "printf('post body %d', row_number)" }
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+          { "name": "user_id", "type": "INTEGER", "expression": "((row_number + 49) % 100) + 1" },
+          { "name": "body", "type": "TEXT", "expression": "printf('post body %d', row_number)" }
         ]
       }
     ]

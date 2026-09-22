@@ -11,11 +11,11 @@
     "dataset": {
       "table": "orders",
       "columns": [
-        { "name": "id", "expression": "row_number" },
-        { "name": "customer_id", "expression": "(row_number % 100) + 1" },
-        { "name": "ordered_at", "expression": "printf('2026-%02d-%02d', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1)" },
-        { "name": "status", "expression": "CASE WHEN row_number % 4 = 0 THEN 'canceled' ELSE 'paid' END" },
-        { "name": "total", "expression": "(row_number % 5000) + 100" }
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "customer_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+        { "name": "ordered_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1)" },
+        { "name": "status", "type": "TEXT", "expression": "CASE WHEN row_number % 4 = 0 THEN 'canceled' ELSE 'paid' END" },
+        { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" }
       ]
     }
   },

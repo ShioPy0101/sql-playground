@@ -11,18 +11,18 @@
       {
         "table": "users",
         "columns": [
-          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
-          { "name": "id", "expression": "row_number" },
-          { "name": "name", "expression": "printf('user-%d', row_number)" }
+          { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('user-%d', row_number)" }
         ]
       },
       {
         "table": "posts",
         "columns": [
-          { "name": "id", "expression": "row_number" },
-          { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
-          { "name": "user_id", "expression": "row_number" },
-          { "name": "body", "expression": "printf('post body %d', row_number)" }
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+          { "name": "user_id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "body", "type": "TEXT", "expression": "printf('post body %d', row_number)" }
         ]
       }
     ]

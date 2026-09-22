@@ -173,7 +173,7 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
     setError("");
 
     try {
-      const payload = await executeSQL(task.csv, query, task.checkSql);
+      const payload = await executeSQL(task.input ?? task.csv, query, task.checkSql, task.inputType ?? "csv");
       setResult(payload.csv);
       setMetrics(payload.metrics ?? null);
     } catch (err) {

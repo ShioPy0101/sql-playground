@@ -39,6 +39,8 @@ export type Task = {
   statement: string;
   constraints: Constraint[];
   csv: string;
+  input?: string;
+  inputType?: InputFormat;
   starterSql: string;
   solutionSql: string;
   checkSql: string;
@@ -61,6 +63,7 @@ export type BenchmarkConfig = {
     table: string;
     columns: Array<{
       name: string;
+      type: "INTEGER" | "REAL" | "TEXT" | "BLOB";
       expression: string;
     }>;
   };
@@ -68,6 +71,7 @@ export type BenchmarkConfig = {
     table: string;
     columns: Array<{
       name: string;
+      type: "INTEGER" | "REAL" | "TEXT" | "BLOB";
       expression: string;
     }>;
   }>;

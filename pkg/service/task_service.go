@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 	taskdata "github.com/ShioPy0101/sql-playground/tasks"
 )
 
@@ -24,6 +25,8 @@ type Constraint struct {
 type TaskTestCase struct {
 	Name        string `json:"name"`
 	CSV         string `json:"csv"`
+	Input       string `json:"input,omitempty"`
+	InputType   string `json:"inputType,omitempty"`
 	CheckSQL    string `json:"checkSql"`
 	ExpectedCSV string `json:"expectedCsv"`
 }
@@ -37,6 +40,8 @@ type Task struct {
 	Statement   string           `json:"statement"`
 	Constraints []Constraint     `json:"constraints"`
 	CSV         string           `json:"csv"`
+	Input       string           `json:"input,omitempty"`
+	InputType   string           `json:"inputType,omitempty"`
 	StarterSQL  string           `json:"starterSql"`
 	SolutionSQL string           `json:"solutionSql"`
 	CheckSQL    string           `json:"checkSql"`
@@ -53,6 +58,8 @@ type PublicTask struct {
 	Statement   string           `json:"statement"`
 	Constraints []Constraint     `json:"constraints"`
 	CSV         string           `json:"csv"`
+	Input       string           `json:"input,omitempty"`
+	InputType   string           `json:"inputType,omitempty"`
 	StarterSQL  string           `json:"starterSql"`
 	SolutionSQL string           `json:"solutionSql"`
 	CheckSQL    string           `json:"checkSql"`
@@ -334,15 +341,36 @@ func (s *TaskService) checkTask(task Task, query string) TaskSubmitResult {
 }
 
 func (s *TaskService) executeTaskCase(task Task, test TaskTestCase, query string) (string, error) {
+	input, inputType := taskCaseInput(task, test)
 	checkSQL := strings.TrimSpace(test.CheckSQL)
 	if checkSQL == "" {
 		checkSQL = task.CheckSQL
 	}
 	if strings.TrimSpace(checkSQL) == "" {
-		return s.sqliteService.Execute(test.CSV, query)
+		return s.sqliteService.ExecuteInput(input, inputType, query)
 	}
 
-	return s.sqliteService.ExecuteAndInspect(test.CSV, query, checkSQL)
+	return s.sqliteService.ExecuteInputAndInspect(input, inputType, query, checkSQL)
+}
+
+func taskCaseInput(task Task, test TaskTestCase) (string, string) {
+	if test.Input != "" || test.InputType != "" {
+		return test.Input, defaultInputType(test.InputType)
+	}
+	if test.CSV != "" {
+		return test.CSV, helper.InputFormatCSV
+	}
+	if task.Input != "" || task.InputType != "" {
+		return task.Input, defaultInputType(task.InputType)
+	}
+	return task.CSV, helper.InputFormatCSV
+}
+
+func defaultInputType(inputType string) string {
+	if strings.TrimSpace(inputType) == "" {
+		return helper.InputFormatCSV
+	}
+	return inputType
 }
 
 func (s *TaskService) LoadTask(number string) (Task, error) {
@@ -427,6 +455,8 @@ func publicTask(task Task) PublicTask {
 		Statement:   task.Statement,
 		Constraints: task.Constraints,
 		CSV:         task.CSV,
+		Input:       task.Input,
+		InputType:   task.InputType,
 		StarterSQL:  task.StarterSQL,
 		SolutionSQL: task.SolutionSQL,
 		CheckSQL:    task.CheckSQL,

@@ -18,6 +18,7 @@ var benchmarkFixedSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:
 
 var benchmarkDDLPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b`)
 var benchmarkIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+var benchmarkColumnTypes = map[string]bool{"INTEGER": true, "REAL": true, "TEXT": true, "BLOB": true}
 
 var DefaultBenchmarkRowCounts = []int{1_000, 10_000, 50_000, 100_000}
 
@@ -40,6 +41,7 @@ type BenchmarkDataset struct {
 
 type BenchmarkColumn struct {
 	Name       string `json:"name"`
+	Type       string `json:"type"`
 	Expression string `json:"expression"`
 }
 
@@ -79,9 +81,6 @@ func (s *BenchmarkService) RunContext(parent context.Context, taskMode string, c
 	query, setupSQL, err := benchmarkInputs(taskMode, config, submission)
 	if err != nil {
 		return BenchmarkReport{}, err
-	}
-	if taskMode == "sql" && strings.TrimSpace(config.SchemaSQL) == "" {
-		return BenchmarkReport{}, fmt.Errorf("SQL問題のbenchmark.schemaSqlが設定されていません")
 	}
 	datasets, err := validatedBenchmarkDatasets(config)
 	if err != nil {
@@ -126,7 +125,7 @@ func runBenchmarkStage(ctx context.Context, rowCount int, taskMode string, setup
 		if _, err := db.ExecContext(ctx, setupSQL); err != nil {
 			return BenchmarkResult{}, fmt.Errorf("受講者DDL適用: %w", err)
 		}
-	} else if _, err := db.ExecContext(ctx, config.SchemaSQL); err != nil {
+	} else if _, err := db.ExecContext(ctx, benchmarkSchemaSQL(config, datasets)); err != nil {
 		return BenchmarkResult{}, fmt.Errorf("計測用schema作成: %w", err)
 	}
 
@@ -175,11 +174,12 @@ func benchmarkDataSQL(dataset BenchmarkDataset, rowCount int) (string, error) {
 	columnNames := make([]string, 0, len(dataset.Columns))
 	expressions := make([]string, 0, len(dataset.Columns))
 	for _, column := range dataset.Columns {
-		if !benchmarkIdentifierPattern.MatchString(column.Name) || strings.TrimSpace(column.Expression) == "" {
+		columnType := strings.ToUpper(strings.TrimSpace(column.Type))
+		if !benchmarkIdentifierPattern.MatchString(column.Name) || !benchmarkColumnTypes[columnType] || strings.TrimSpace(column.Expression) == "" {
 			return "", fmt.Errorf("benchmark.datasetの列定義が不正です")
 		}
 		columnNames = append(columnNames, quoteBenchmarkIdentifier(column.Name))
-		expressions = append(expressions, column.Expression)
+		expressions = append(expressions, fmt.Sprintf("CAST((%s) AS %s)", column.Expression, columnType))
 	}
 
 	return fmt.Sprintf(`
@@ -192,6 +192,21 @@ func benchmarkDataSQL(dataset BenchmarkDataset, rowCount int) (string, error) {
 		SELECT %s
 		FROM sequence;
 	`, rowCount, quoteBenchmarkIdentifier(dataset.Table), strings.Join(columnNames, ", "), strings.Join(expressions, ", ")), nil
+}
+
+func benchmarkSchemaSQL(config BenchmarkConfig, datasets []BenchmarkDataset) string {
+	if strings.TrimSpace(config.SchemaSQL) != "" {
+		return config.SchemaSQL
+	}
+	statements := make([]string, 0, len(datasets))
+	for _, dataset := range datasets {
+		columns := make([]string, 0, len(dataset.Columns))
+		for _, column := range dataset.Columns {
+			columns = append(columns, fmt.Sprintf("%s %s", quoteBenchmarkIdentifier(column.Name), strings.ToUpper(strings.TrimSpace(column.Type))))
+		}
+		statements = append(statements, fmt.Sprintf("CREATE TABLE %s (%s);", quoteBenchmarkIdentifier(dataset.Table), strings.Join(columns, ", ")))
+	}
+	return strings.Join(statements, "\n")
 }
 
 func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string) (query string, setupSQL string, err error) {
@@ -253,6 +268,11 @@ func validatedBenchmarkDatasets(config BenchmarkConfig) ([]BenchmarkDataset, err
 	for _, dataset := range datasets {
 		if !benchmarkIdentifierPattern.MatchString(dataset.Table) || len(dataset.Columns) == 0 {
 			return nil, fmt.Errorf("benchmark.datasetの定義が不正です")
+		}
+		for _, column := range dataset.Columns {
+			if !benchmarkIdentifierPattern.MatchString(column.Name) || !benchmarkColumnTypes[strings.ToUpper(strings.TrimSpace(column.Type))] || strings.TrimSpace(column.Expression) == "" {
+				return nil, fmt.Errorf("benchmark.datasetの列定義が不正です")
+			}
 		}
 	}
 	return datasets, nil

@@ -11,12 +11,12 @@
     "dataset": {
       "table": "posts",
       "columns": [
-        { "name": "id", "expression": "row_number" },
-        { "name": "tenant_id", "expression": "(row_number % 100) + 1" },
-        { "name": "user_id", "expression": "(row_number % 50000) + 1" },
-        { "name": "title", "expression": "printf('post title %d', row_number)" },
-        { "name": "body", "expression": "printf('post body %d', row_number)" },
-        { "name": "created_at", "expression": "printf('2026-%02d-%02d 12:%02d:00', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1, row_number % 60)" }
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "tenant_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+        { "name": "user_id", "type": "INTEGER", "expression": "(row_number % 50000) + 1" },
+        { "name": "title", "type": "TEXT", "expression": "printf('post title %d', row_number)" },
+        { "name": "body", "type": "TEXT", "expression": "printf('post body %d', row_number)" },
+        { "name": "created_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d 12:%02d:00', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1, row_number % 60)" }
       ]
     }
   },

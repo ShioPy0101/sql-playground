@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
 
 func TestBenchmarkServiceRunsAllConfiguredStages(t *testing.T) {
@@ -258,10 +260,10 @@ func benchmarkPostsDataset() *BenchmarkDataset {
 	return &BenchmarkDataset{
 		Table: "posts",
 		Columns: []BenchmarkColumn{
-			{Name: "id", Expression: "row_number"},
-			{Name: "tenant_id", Expression: "(row_number % 100) + 1"},
-			{Name: "user_id", Expression: "(row_number % 50000) + 1"},
-			{Name: "body", Expression: "'benchmark body'"},
+			{Name: "id", Type: "INTEGER", Expression: "row_number"},
+			{Name: "tenant_id", Type: "INTEGER", Expression: "(row_number % 100) + 1"},
+			{Name: "user_id", Type: "INTEGER", Expression: "(row_number % 50000) + 1"},
+			{Name: "body", Type: "TEXT", Expression: "'benchmark body'"},
 		},
 	}
 }
@@ -270,11 +272,11 @@ func benchmarkOrdersDataset() *BenchmarkDataset {
 	return &BenchmarkDataset{
 		Table: "orders",
 		Columns: []BenchmarkColumn{
-			{Name: "id", Expression: "row_number"},
-			{Name: "customer_id", Expression: "(row_number % 100) + 1"},
-			{Name: "ordered_at", Expression: "printf('2026-%02d-%02d', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1)"},
-			{Name: "status", Expression: "CASE WHEN row_number % 4 = 0 THEN 'canceled' ELSE 'paid' END"},
-			{Name: "total", Expression: "(row_number % 5000) + 100"},
+			{Name: "id", Type: "INTEGER", Expression: "row_number"},
+			{Name: "customer_id", Type: "INTEGER", Expression: "(row_number % 100) + 1"},
+			{Name: "ordered_at", Type: "TEXT", Expression: "printf('2026-%02d-%02d', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1)"},
+			{Name: "status", Type: "TEXT", Expression: "CASE WHEN row_number % 4 = 0 THEN 'canceled' ELSE 'paid' END"},
+			{Name: "total", Type: "INTEGER", Expression: "(row_number % 5000) + 100"},
 		},
 	}
 }
@@ -300,5 +302,68 @@ func TestBenchmarkTimeoutUsesTaskValueAndServerMaximum(t *testing.T) {
 	timeout, err = benchmarkTimeout(3000)
 	if err != nil || timeout != 2*time.Second {
 		t.Fatalf("capped timeout = %s, err = %v", timeout, err)
+	}
+}
+
+func TestBenchmarkDatasetRequiresSupportedColumnTypes(t *testing.T) {
+	_, err := validatedBenchmarkDatasets(BenchmarkConfig{Dataset: &BenchmarkDataset{
+		Table: "items",
+		Columns: []BenchmarkColumn{
+			{Name: "id", Type: "NUMERIC", Expression: "row_number"},
+		},
+	}})
+	if err == nil {
+		t.Fatal("validatedBenchmarkDatasets accepted unsupported NUMERIC type")
+	}
+
+	schema := benchmarkSchemaSQL(BenchmarkConfig{}, []BenchmarkDataset{{
+		Table: "items",
+		Columns: []BenchmarkColumn{
+			{Name: "id", Type: "INTEGER", Expression: "row_number"},
+			{Name: "label", Type: "TEXT", Expression: "'item'"},
+		},
+	}})
+	if !strings.Contains(schema, `"id" INTEGER`) || !strings.Contains(schema, `"label" TEXT`) {
+		t.Fatalf("generated schema = %q, want explicit column types", schema)
+	}
+}
+
+func TestBenchmarkDatasetGeneratesValuesWithDeclaredStorageTypes(t *testing.T) {
+	dataset := BenchmarkDataset{
+		Table: "typed_values",
+		Columns: []BenchmarkColumn{
+			{Name: "integer_value", Type: "INTEGER", Expression: "'42'"},
+			{Name: "real_value", Type: "REAL", Expression: "'1.5'"},
+			{Name: "text_value", Type: "TEXT", Expression: "42"},
+			{Name: "blob_value", Type: "BLOB", Expression: "'blob'"},
+		},
+	}
+	db, cleanup, err := helper.OpenTempSQLiteDB()
+	if err != nil {
+		t.Fatalf("OpenTempSQLiteDB returned error: %v", err)
+	}
+	defer cleanup()
+	defer db.Close()
+
+	if _, err := db.Exec(benchmarkSchemaSQL(BenchmarkConfig{}, []BenchmarkDataset{dataset})); err != nil {
+		t.Fatalf("create generated schema: %v", err)
+	}
+	insertSQL, err := benchmarkDataSQL(dataset, 1)
+	if err != nil {
+		t.Fatalf("benchmarkDataSQL returned error: %v", err)
+	}
+	if _, err := db.Exec(insertSQL); err != nil {
+		t.Fatalf("insert generated values: %v", err)
+	}
+
+	var integerType, realType, textType, blobType string
+	err = db.QueryRow(`SELECT typeof(integer_value), typeof(real_value), typeof(text_value), typeof(blob_value) FROM typed_values`).Scan(
+		&integerType, &realType, &textType, &blobType,
+	)
+	if err != nil {
+		t.Fatalf("read storage types: %v", err)
+	}
+	if integerType != "integer" || realType != "real" || textType != "text" || blobType != "blob" {
+		t.Fatalf("storage types = %q, %q, %q, %q", integerType, realType, textType, blobType)
 	}
 }

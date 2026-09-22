@@ -10,10 +10,10 @@
     "dataset": {
       "table": "users",
       "columns": [
-        { "name": "id", "expression": "row_number" },
-        { "name": "name", "expression": "printf('user-%d', row_number)" },
-        { "name": "email", "expression": "printf('user%d@example.com', row_number)" },
-        { "name": "password_digest", "expression": "printf('digest-%d', row_number)" }
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "name", "type": "TEXT", "expression": "printf('user-%d', row_number)" },
+        { "name": "email", "type": "TEXT", "expression": "printf('user%d@example.com', row_number)" },
+        { "name": "password_digest", "type": "TEXT", "expression": "printf('digest-%d', row_number)" }
       ]
     }
   },

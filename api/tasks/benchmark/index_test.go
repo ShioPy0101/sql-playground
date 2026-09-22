@@ -25,10 +25,10 @@ func TestHandlerRunsConfiguredBenchmark(t *testing.T) {
 			"dataset": {
 				"table": "posts",
 				"columns": [
-					{"name":"id", "expression":"row_number"},
-					{"name":"tenant_id", "expression":"(row_number % 100) + 1"},
-					{"name":"user_id", "expression":"(row_number % 50000) + 1"},
-					{"name":"body", "expression":"'benchmark body'"}
+					{"name":"id", "type":"INTEGER", "expression":"row_number"},
+					{"name":"tenant_id", "type":"INTEGER", "expression":"(row_number % 100) + 1"},
+					{"name":"user_id", "type":"INTEGER", "expression":"(row_number % 50000) + 1"},
+					{"name":"body", "type":"TEXT", "expression":"'benchmark body'"}
 				]
 			}
 		}

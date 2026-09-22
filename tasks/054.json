@@ -11,19 +11,19 @@
       {
         "table": "users",
         "columns": [
-          { "name": "id", "expression": "row_number" },
-          { "name": "name", "expression": "printf('user-%d', row_number)" }
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('user-%d', row_number)" }
         ]
       },
       {
         "table": "magic_link_authentications",
         "columns": [
-          { "name": "id", "expression": "row_number" },
-          { "name": "user_id", "expression": "(row_number % 100) + 1" },
-          { "name": "token_digest", "expression": "printf('token-digest-%d', row_number)" },
-          { "name": "expires_at", "expression": "printf('2026-12-%02d 12:00:00', ((row_number - 1) % 28) + 1)" },
-          { "name": "used_at", "expression": "CASE WHEN row_number % 3 = 0 THEN '2026-09-01 12:00:00' ELSE NULL END" },
-          { "name": "created_at", "expression": "printf('2026-09-%02d 10:00:00', ((row_number - 1) % 28) + 1)" }
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "user_id", "type": "INTEGER", "expression": "(row_number % 100) + 1" },
+          { "name": "token_digest", "type": "TEXT", "expression": "printf('token-digest-%d', row_number)" },
+          { "name": "expires_at", "type": "TEXT", "expression": "printf('2026-12-%02d 12:00:00', ((row_number - 1) % 28) + 1)" },
+          { "name": "used_at", "type": "TEXT", "expression": "CASE WHEN row_number % 3 = 0 THEN '2026-09-01 12:00:00' ELSE NULL END" },
+          { "name": "created_at", "type": "TEXT", "expression": "printf('2026-09-%02d 10:00:00', ((row_number - 1) % 28) + 1)" }
         ]
       }
     ]

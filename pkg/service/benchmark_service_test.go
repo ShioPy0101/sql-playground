@@ -311,9 +311,34 @@ func TestBenchmarkServiceRejectsUnsafeSQLTarget(t *testing.T) {
 		Enabled:   true,
 		Target:    "submission",
 		RowCounts: []int{1_000},
-	}, `DELETE FROM posts;`)
+	}, `DROP TABLE posts;`)
 	if err == nil {
-		t.Fatal("Run accepted non-SELECT submission")
+		t.Fatal("Run accepted unsupported submission")
+	}
+}
+
+func TestBenchmarkServiceMeasuresInsertUpdateAndDelete(t *testing.T) {
+	statements := map[string]string{
+		"insert": `INSERT INTO posts (id, tenant_id, user_id, body) VALUES (1001, 42, 1, 'new post')`,
+		"update": `UPDATE posts SET body = 'updated' WHERE tenant_id = 42`,
+		"delete": `DELETE FROM posts WHERE tenant_id = 42`,
+	}
+	for name, statement := range statements {
+		t.Run(name, func(t *testing.T) {
+			report, err := NewBenchmarkService().Run("sql", BenchmarkConfig{
+				Enabled:   true,
+				Target:    "submission",
+				RowCounts: []int{1_000},
+				SchemaSQL: benchmarkPostsSchema(),
+				Dataset:   benchmarkPostsDataset(),
+			}, statement)
+			if err != nil {
+				t.Fatalf("Run returned error: %v", err)
+			}
+			if report.Status != "completed" || len(report.Results) != 1 || report.Results[0].VMSteps <= 0 {
+				t.Fatalf("report = %#v, want completed write metrics", report)
+			}
+		})
 	}
 }
 

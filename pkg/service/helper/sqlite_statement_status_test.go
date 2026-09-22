@@ -61,3 +61,38 @@ func TestMeasureSelectStatementHonorsCanceledContext(t *testing.T) {
 		t.Fatalf("error = %v, want context.Canceled", err)
 	}
 }
+
+func TestMeasureStatementSupportsInsertUpdateAndDelete(t *testing.T) {
+	db, databasePath, cleanup, err := OpenTempSQLiteDBWithPath()
+	if err != nil {
+		t.Fatalf("OpenTempSQLiteDBWithPath returned error: %v", err)
+	}
+	defer cleanup()
+	defer db.Close()
+
+	if _, err := db.Exec(`CREATE TABLE items (id INTEGER PRIMARY KEY, value INTEGER); INSERT INTO items VALUES (1, 10), (2, 20);`); err != nil {
+		t.Fatalf("initialize table: %v", err)
+	}
+	statements := []string{
+		`INSERT INTO items (id, value) VALUES (3, 30)`,
+		`UPDATE items SET value = value + 1 WHERE id <= 2`,
+		`DELETE FROM items WHERE id = 3`,
+	}
+	for _, statement := range statements {
+		status, err := MeasureStatement(databasePath, statement)
+		if err != nil {
+			t.Fatalf("measure %q: %v", statement, err)
+		}
+		if status.VMSteps <= 0 {
+			t.Fatalf("%q VM_STEP = %d, want positive", statement, status.VMSteps)
+		}
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM items`).Scan(&count); err != nil {
+		t.Fatalf("count items: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("item count = %d, want writes to be applied", count)
+	}
+}

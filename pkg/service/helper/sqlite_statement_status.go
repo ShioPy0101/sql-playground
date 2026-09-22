@@ -30,14 +30,31 @@ func MeasureSelectStatement(databasePath string, statement string) (NativeStatem
 	return MeasureSelectStatementContext(context.Background(), databasePath, statement)
 }
 
+// MeasureStatement executes one statement against a disposable writable
+// database and collects native SQLite counters. Callers are responsible for
+// restricting the accepted SQL and discarding the database afterward.
+func MeasureStatement(databasePath string, statement string) (NativeStatementStatus, error) {
+	return MeasureStatementContext(context.Background(), databasePath, statement)
+}
+
 // MeasureSelectStatementContext checks cancellation between sqlite3_step calls.
 // Benchmark queries are deliberately restricted and bounded, so one step cannot
 // hide unbounded user SQL work.
 func MeasureSelectStatementContext(ctx context.Context, databasePath string, statement string) (NativeStatementStatus, error) {
+	return measureStatementContext(ctx, databasePath, statement, true)
+}
+
+// MeasureStatementContext supports both reads and writes. Benchmark databases
+// are stage-local temporary files, so mutations never reach task or user data.
+func MeasureStatementContext(ctx context.Context, databasePath string, statement string) (NativeStatementStatus, error) {
+	return measureStatementContext(ctx, databasePath, statement, false)
+}
+
+func measureStatementContext(ctx context.Context, databasePath string, statement string, readOnly bool) (NativeStatementStatus, error) {
 	tls := libc.NewTLS()
 	defer tls.Close()
 
-	db, err := openLowLevelSQLite(tls, databasePath)
+	db, err := openLowLevelSQLite(tls, databasePath, readOnly)
 	if err != nil {
 		return NativeStatementStatus{}, err
 	}
@@ -49,7 +66,7 @@ func MeasureSelectStatementContext(ctx context.Context, databasePath string, sta
 	}
 	defer sqlite3.Xsqlite3_finalize(tls, prepared)
 
-	if sqlite3.Xsqlite3_stmt_readonly(tls, prepared) == 0 {
+	if readOnly && sqlite3.Xsqlite3_stmt_readonly(tls, prepared) == 0 {
 		return NativeStatementStatus{}, errStatementStatusNotReadOnly
 	}
 	if count := sqlite3.Xsqlite3_bind_parameter_count(tls, prepared); count != 0 {
@@ -82,7 +99,7 @@ func MeasureSelectStatementContext(ctx context.Context, databasePath string, sta
 	}
 }
 
-func openLowLevelSQLite(tls *libc.TLS, databasePath string) (uintptr, error) {
+func openLowLevelSQLite(tls *libc.TLS, databasePath string, readOnly bool) (uintptr, error) {
 	filename, err := libc.CString(databasePath)
 	if err != nil {
 		return 0, err
@@ -95,11 +112,15 @@ func openLowLevelSQLite(tls *libc.TLS, databasePath string) (uintptr, error) {
 	}
 	defer libc.Xfree(tls, output)
 
+	flags := int32(sqlite3.SQLITE_OPEN_READWRITE | sqlite3.SQLITE_OPEN_URI)
+	if readOnly {
+		flags = sqlite3.SQLITE_OPEN_READONLY | sqlite3.SQLITE_OPEN_URI
+	}
 	rc := sqlite3.Xsqlite3_open_v2(
 		tls,
 		filename,
 		output,
-		sqlite3.SQLITE_OPEN_READONLY|sqlite3.SQLITE_OPEN_URI,
+		flags,
 		0,
 	)
 	db := *(*uintptr)(unsafe.Pointer(output))

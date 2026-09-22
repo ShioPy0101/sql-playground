@@ -14,7 +14,7 @@ func OpenTempSQLiteDB() (*sql.DB, func(), error) {
 }
 
 // OpenTempSQLiteDBWithPath also exposes the temporary file path for helpers
-// that need to open an independent read-only SQLite connection.
+// that need an independent SQLite connection for native statement metrics.
 func OpenTempSQLiteDBWithPath() (*sql.DB, string, func(), error) {
 	tmpFile, err := os.CreateTemp("", "sqlite-playground-*.sqlite")
 	if err != nil {

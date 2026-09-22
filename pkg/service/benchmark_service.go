@@ -13,7 +13,7 @@ import (
 	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
 
-var benchmarkSubmissionSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*(?:SELECT|WITH)\b`)
+var benchmarkSubmissionStatementPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*(?:SELECT|WITH|INSERT|UPDATE|DELETE|REPLACE)\b`)
 var benchmarkFixedSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*SELECT\b`)
 
 var benchmarkDDLPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b`)
@@ -149,9 +149,9 @@ func runBenchmarkStage(ctx context.Context, rowCount int, taskMode string, setup
 	if err != nil {
 		return BenchmarkResult{}, fmt.Errorf("実行計画取得: %w", err)
 	}
-	status, err := helper.MeasureSelectStatementContext(ctx, databasePath, query)
+	status, err := helper.MeasureStatementContext(ctx, databasePath, query)
 	if err != nil {
-		return BenchmarkResult{}, fmt.Errorf("SELECT計測: %w", err)
+		return BenchmarkResult{}, fmt.Errorf("SQL計測: %w", err)
 	}
 
 	databaseSize := int64(0)
@@ -214,8 +214,8 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 	switch {
 	case taskMode == "sql" && config.Target == "submission":
 		statements := helper.SplitSQLStatements(submission)
-		if len(statements) != 1 || !matchesBenchmarkSubmissionSelect(statements[0]) {
-			return "", "", fmt.Errorf("benchmark対象は安全な単一SELECTに限定されています")
+		if len(statements) != 1 || !matchesBenchmarkSubmissionStatement(statements[0]) {
+			return "", "", fmt.Errorf("benchmark対象は安全な単一のSELECT / INSERT / UPDATE / DELETEに限定されています")
 		}
 		return strings.TrimSpace(statements[0]), "", nil
 	case (taskMode == "ddl" || taskMode == "sql") && config.Target == "fixed-query":
@@ -248,9 +248,9 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 	}
 }
 
-func matchesBenchmarkSubmissionSelect(statement string) bool {
+func matchesBenchmarkSubmissionStatement(statement string) bool {
 	statements := helper.SplitSQLStatements(statement)
-	return len(statements) == 1 && benchmarkSubmissionSelectPattern.MatchString(statements[0])
+	return len(statements) == 1 && benchmarkSubmissionStatementPattern.MatchString(statements[0])
 }
 
 func matchesBenchmarkFixedSelect(statement string) bool {

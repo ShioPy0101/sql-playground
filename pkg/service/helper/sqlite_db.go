@@ -32,6 +32,14 @@ func OpenTempSQLiteDBWithPath() (*sql.DB, string, func(), error) {
 		os.Remove(dbPath)
 		return nil, "", nil, err
 	}
+	// Foreign-key enforcement is connection-local in SQLite. A single
+	// connection keeps the setting stable for the lifetime of this temporary DB.
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		db.Close()
+		os.Remove(dbPath)
+		return nil, "", nil, err
+	}
 
 	cleanup := func() {
 		os.Remove(dbPath)

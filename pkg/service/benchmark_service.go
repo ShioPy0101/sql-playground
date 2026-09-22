@@ -13,7 +13,8 @@ import (
 	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
 
-var benchmarkSelectPattern = regexp.MustCompile(`(?is)^\s*SELECT\s+\*\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)\s+WHERE\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+(?:\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+)*\s*$`)
+var benchmarkSubmissionSelectPattern = regexp.MustCompile(`(?is)^\s*SELECT\s+\*\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)\s+WHERE\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+(?:\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+)*(?:\s+ORDER\s+BY\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(?:ASC|DESC))?)?\s*$`)
+var benchmarkFixedSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*SELECT\b`)
 
 var benchmarkDDLPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b`)
 var benchmarkIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -21,14 +22,15 @@ var benchmarkIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var DefaultBenchmarkRowCounts = []int{1_000, 10_000, 50_000, 100_000}
 
 type BenchmarkConfig struct {
-	Enabled     bool              `json:"enabled"`
-	RunOnFailed bool              `json:"runOnFailed,omitempty"`
-	TimeoutMS   int               `json:"timeoutMs,omitempty"`
-	Target      string            `json:"target"`
-	Query       string            `json:"query,omitempty"`
-	RowCounts   []int             `json:"rowCounts"`
-	SchemaSQL   string            `json:"schemaSql,omitempty"`
-	Dataset     *BenchmarkDataset `json:"dataset,omitempty"`
+	Enabled     bool               `json:"enabled"`
+	RunOnFailed bool               `json:"runOnFailed,omitempty"`
+	TimeoutMS   int                `json:"timeoutMs,omitempty"`
+	Target      string             `json:"target"`
+	Query       string             `json:"query,omitempty"`
+	RowCounts   []int              `json:"rowCounts"`
+	SchemaSQL   string             `json:"schemaSql,omitempty"`
+	Dataset     *BenchmarkDataset  `json:"dataset,omitempty"`
+	Datasets    []BenchmarkDataset `json:"datasets,omitempty"`
 }
 
 type BenchmarkDataset struct {
@@ -81,7 +83,8 @@ func (s *BenchmarkService) RunContext(parent context.Context, taskMode string, c
 	if taskMode == "sql" && strings.TrimSpace(config.SchemaSQL) == "" {
 		return BenchmarkReport{}, fmt.Errorf("SQL問題のbenchmark.schemaSqlが設定されていません")
 	}
-	if err := validateBenchmarkDataset(config.Dataset, query); err != nil {
+	datasets, err := validatedBenchmarkDatasets(config)
+	if err != nil {
 		return BenchmarkReport{}, err
 	}
 	rowCounts, err := validatedBenchmarkRowCounts(config.RowCounts)
@@ -97,7 +100,7 @@ func (s *BenchmarkService) RunContext(parent context.Context, taskMode string, c
 
 	report := BenchmarkReport{Status: "completed", Query: query, Results: make([]BenchmarkResult, 0, len(rowCounts))}
 	for _, rowCount := range rowCounts {
-		result, err := runBenchmarkStage(ctx, rowCount, taskMode, setupSQL, query, config)
+		result, err := runBenchmarkStage(ctx, rowCount, taskMode, setupSQL, query, config, datasets)
 		if err != nil {
 			report.Status = "failed"
 			report.StoppedReason = fmt.Sprintf("%d行の計測で停止しました: %v", rowCount, err)
@@ -108,13 +111,16 @@ func (s *BenchmarkService) RunContext(parent context.Context, taskMode string, c
 	return report, nil
 }
 
-func runBenchmarkStage(ctx context.Context, rowCount int, taskMode string, setupSQL string, query string, config BenchmarkConfig) (BenchmarkResult, error) {
+func runBenchmarkStage(ctx context.Context, rowCount int, taskMode string, setupSQL string, query string, config BenchmarkConfig, datasets []BenchmarkDataset) (BenchmarkResult, error) {
 	db, databasePath, cleanup, err := helper.OpenTempSQLiteDBWithPath()
 	if err != nil {
 		return BenchmarkResult{}, err
 	}
 	defer cleanup()
 	defer db.Close()
+	if _, err := db.ExecContext(ctx, "PRAGMA foreign_keys = ON"); err != nil {
+		return BenchmarkResult{}, fmt.Errorf("外部キー有効化: %w", err)
+	}
 
 	if taskMode == "ddl" {
 		if _, err := db.ExecContext(ctx, setupSQL); err != nil {
@@ -125,12 +131,14 @@ func runBenchmarkStage(ctx context.Context, rowCount int, taskMode string, setup
 	}
 
 	generationStartedAt := time.Now()
-	dataSQL, err := benchmarkDataSQL(*config.Dataset, rowCount)
-	if err != nil {
-		return BenchmarkResult{}, err
-	}
-	if _, err := db.ExecContext(ctx, dataSQL); err != nil {
-		return BenchmarkResult{}, fmt.Errorf("テストデータ生成: %w", err)
+	for _, dataset := range datasets {
+		dataSQL, err := benchmarkDataSQL(dataset, rowCount)
+		if err != nil {
+			return BenchmarkResult{}, err
+		}
+		if _, err := db.ExecContext(ctx, dataSQL); err != nil {
+			return BenchmarkResult{}, fmt.Errorf("%sのテストデータ生成: %w", dataset.Table, err)
+		}
 	}
 	generationDuration := time.Since(generationStartedAt)
 	if err := ctx.Err(); err != nil {
@@ -190,13 +198,16 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 	switch {
 	case taskMode == "sql" && config.Target == "submission":
 		statements := helper.SplitSQLStatements(submission)
-		if len(statements) != 1 || !matchesBenchmarkSelect(statements[0]) {
+		if len(statements) != 1 || !matchesBenchmarkSubmissionSelect(statements[0]) {
 			return "", "", fmt.Errorf("benchmark対象は安全な単一SELECTに限定されています")
 		}
 		return strings.TrimSpace(statements[0]), "", nil
-	case taskMode == "ddl" && config.Target == "fixed-query":
-		if !matchesBenchmarkSelect(config.Query) {
+	case (taskMode == "ddl" || taskMode == "sql") && config.Target == "fixed-query":
+		if !matchesBenchmarkFixedSelect(config.Query) {
 			return "", "", fmt.Errorf("benchmark.queryは許可されたSELECTではありません")
+		}
+		if taskMode == "sql" {
+			return strings.TrimSpace(config.Query), "", nil
 		}
 		statements := helper.SplitSQLStatements(submission)
 		if len(statements) == 0 {
@@ -215,25 +226,36 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 
 func benchmarkTable(query string) string {
 	trimmed := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(query), ";"))
-	matches := benchmarkSelectPattern.FindStringSubmatch(trimmed)
+	matches := benchmarkSubmissionSelectPattern.FindStringSubmatch(trimmed)
 	if len(matches) == 2 {
 		return matches[1]
 	}
 	return ""
 }
 
-func matchesBenchmarkSelect(statement string) bool {
+func matchesBenchmarkSubmissionSelect(statement string) bool {
 	return benchmarkTable(statement) != ""
 }
 
-func validateBenchmarkDataset(dataset *BenchmarkDataset, query string) error {
-	if dataset == nil || !benchmarkIdentifierPattern.MatchString(dataset.Table) || len(dataset.Columns) == 0 {
-		return fmt.Errorf("benchmark.datasetが設定されていません")
+func matchesBenchmarkFixedSelect(statement string) bool {
+	statements := helper.SplitSQLStatements(statement)
+	return len(statements) == 1 && benchmarkFixedSelectPattern.MatchString(statements[0])
+}
+
+func validatedBenchmarkDatasets(config BenchmarkConfig) ([]BenchmarkDataset, error) {
+	datasets := config.Datasets
+	if len(datasets) == 0 && config.Dataset != nil {
+		datasets = []BenchmarkDataset{*config.Dataset}
 	}
-	if !strings.EqualFold(dataset.Table, benchmarkTable(query)) {
-		return fmt.Errorf("benchmark.dataset.tableとqueryの対象テーブルが一致しません")
+	if len(datasets) == 0 {
+		return nil, fmt.Errorf("benchmark.datasetまたはbenchmark.datasetsが設定されていません")
 	}
-	return nil
+	for _, dataset := range datasets {
+		if !benchmarkIdentifierPattern.MatchString(dataset.Table) || len(dataset.Columns) == 0 {
+			return nil, fmt.Errorf("benchmark.datasetの定義が不正です")
+		}
+	}
+	return datasets, nil
 }
 
 func quoteBenchmarkIdentifier(identifier string) string {

@@ -64,6 +64,13 @@ export type BenchmarkConfig = {
       expression: string;
     }>;
   };
+  datasets?: Array<{
+    table: string;
+    columns: Array<{
+      name: string;
+      expression: string;
+    }>;
+  }>;
 };
 
 export type BenchmarkResult = {

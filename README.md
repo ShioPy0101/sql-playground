@@ -107,6 +107,7 @@ npm run build
 - `GET /api/tasks`: 問題一覧
 - `GET /api/tasks/:number`: 問題詳細
 - `POST /api/tasks/:number/submit`: 回答提出
+- `POST /api/tasks/:number/benchmark`: 課題設定に基づく分離DBでの性能計測
 - `GET /api/events/:slug`: イベント情報・参加状況・課題一覧
 - `POST /api/events/:slug/join`: 表示名を登録してイベントへ参加
 - `GET /api/events/:slug/tasks/:number`: イベント内の問題詳細

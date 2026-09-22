@@ -27,7 +27,7 @@
   },
   "slug": "saas-link-posts-to-users",
   "title": "[外部キー][書いてみよう] 投稿をユーザーに紐付ける",
-  "statement": "users と posts テーブルを作成し、投稿をユーザーに紐付けてください。\n\nusers は id INTEGER PRIMARY KEY, name TEXT NOT NULL を持ちます。posts は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL を持ち、user_id から users(id) への外部キーを設定します。\n\n外部キーにより、存在するユーザーだけを投稿者として指定できる構造を作ります。",
+  "statement": "users と posts テーブルを作成してください。\n\nusers は id INTEGER PRIMARY KEY, name TEXT NOT NULL を持ちます。posts は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL を持ち、user_id から users(id) への外部キーを設定します。",
   "constraints": [
     { "name": "作成するテーブル", "value": "users と posts を作成します" },
     { "name": "外部キー", "value": "posts.user_id は users.id を参照します" },

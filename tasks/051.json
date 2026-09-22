@@ -29,7 +29,7 @@
   },
   "slug": "saas-add-tenant-id",
   "title": "[マルチテナント][書いてみよう] データに tenant_id を持たせる",
-  "statement": "users と posts の両方に tenant_id を持たせ、各データがどのテナントに属するか識別できるテーブルを作成してください。\n\nusers は id, tenant_id, name、posts は id, tenant_id, user_id, body を持ちます。id はそれぞれ INTEGER PRIMARY KEY、それ以外の列はすべて NOT NULL とします。\n\ntenant_id を保存することで、同じテーブルに複数組織のデータを置く準備ができます。",
+  "statement": "users と posts の両方に tenant_id を持たせてください。\n\nusers は id, tenant_id, name、posts は id, tenant_id, user_id, body を持ちます。id はそれぞれ INTEGER PRIMARY KEY、それ以外の列はすべて NOT NULL とします。",
   "constraints": [
     { "name": "users", "value": "id, tenant_id, name を定義します" },
     { "name": "posts", "value": "id, tenant_id, user_id, body を定義します" },

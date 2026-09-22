@@ -3,7 +3,7 @@
   "mode": "ddl",
   "slug": "saas-avoid-over-indexing",
   "title": "[インデックス][考えてみよう] インデックスは多いほどよい？",
-  "statement": "投稿一覧で頻繁に使う検索は、テナントで絞って新しい順に並べる処理です。この用途に必要なインデックスだけを作成してください。\n\nposts に idx_posts_tenant_created_at (tenant_id, created_at) を1本だけ作ります。user_id, title, body などへ、利用する検索が決まっていないインデックスは追加しません。\n\nインデックスは読み取りを速くする一方、INSERTやUPDATEのたびに更新が必要です。検索要件に合わせて必要なものだけを選ぶことが大切です。現在のrunnerはSELECT計測用のため、書き込み性能の比較は将来のfixed-write benchmarkで扱います。",
+  "statement": "投稿一覧で使う検索は、テナントで絞って新しい順に並べる処理です。この検索に必要なインデックスだけを作成してください。\n\nposts に idx_posts_tenant_created_at (tenant_id, created_at) を1本だけ作ります。user_id, title, body の個別インデックスは追加しません。",
   "constraints": [
     { "name": "作成するインデックス", "value": "idx_posts_tenant_created_at だけを作成します" },
     { "name": "列の順序", "value": "tenant_id, created_at の順にします" },

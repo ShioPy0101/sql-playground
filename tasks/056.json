@@ -22,7 +22,7 @@
   },
   "slug": "saas-index-posts-tenant-id",
   "title": "[インデックス][書いてみよう] テナント内の投稿検索を高速化する",
-  "statement": "posts テーブルを作成し、tenant_id の検索を高速化するインデックスを追加してください。\n\nposts は id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL を持ちます。インデックス名は idx_posts_tenant_id としてください。\n\nマルチテナントのアプリケーションでは tenant_id がほぼすべての検索条件に入ります。問題51と同じ検索を、インデックス追加後の実行計画と全表走査ステップ数で比較できます。",
+  "statement": "posts テーブルを作成し、tenant_id のインデックスを追加してください。\n\nposts は id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL を持ちます。インデックス名は idx_posts_tenant_id とします。",
   "constraints": [
     { "name": "テーブル", "value": "指定された6列を持つ posts を作成します" },
     { "name": "インデックス名", "value": "idx_posts_tenant_id とします" },

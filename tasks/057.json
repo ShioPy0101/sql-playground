@@ -22,7 +22,7 @@
   },
   "slug": "saas-composite-index-posts-timeline",
   "title": "[複合インデックス][書いてみよう] テナント内の新着投稿を高速化する",
-  "statement": "テナント内の新着投稿一覧を高速化する複合インデックスを作成してください。\n\nposts は id, tenant_id, user_id, title, body, created_at を持ちます。WHERE tenant_id = 42 ORDER BY created_at DESC という検索に合わせ、idx_posts_tenant_created_at を (tenant_id, created_at) の順で作成します。\n\nWHEREで絞る列だけでなく、その後の並び順まで含めてインデックスを設計すると、SQLite内部の追加ソートを避けられることがあります。",
+  "statement": "テナント内の新着投稿一覧に使う複合インデックスを作成してください。\n\nposts は id, tenant_id, user_id, title, body, created_at を持ちます。WHERE tenant_id = 42 ORDER BY created_at DESC に合わせ、idx_posts_tenant_created_at を (tenant_id, created_at) の順で作成します。",
   "constraints": [
     { "name": "インデックス名", "value": "idx_posts_tenant_created_at とします" },
     { "name": "列の順序", "value": "tenant_id, created_at の順にします" },

@@ -19,7 +19,7 @@
   },
   "slug": "saas-create-users-table",
   "title": "[テーブル設計][書いてみよう] users テーブルを作成する",
-  "statement": "アカウントを保存する users テーブルを作成してください。\n\n列は id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, password_digest TEXT NOT NULL とします。パスワードそのものではなく、安全に変換したダイジェストを password_digest に保存します。\n\nCREATE TABLE、データ型、主キー、NOT NULL を復習しながら、これから育てるサービスの土台を作りましょう。",
+  "statement": "アカウントを保存する users テーブルを作成してください。\n\n列は id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, password_digest TEXT NOT NULL とします。パスワードそのものではなく、ダイジェストを password_digest に保存します。",
   "constraints": [
     { "name": "テーブル", "value": "users テーブルを作成します" },
     { "name": "主キー", "value": "id は INTEGER PRIMARY KEY にします" },

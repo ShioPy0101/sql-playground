@@ -30,7 +30,7 @@
   },
   "slug": "saas-create-magic-link-authentications",
   "title": "[認証][書いてみよう] マジックリンク認証の状態を保存する",
-  "statement": "users と magic_link_authentications テーブルを作成してください。\n\nmagic_link_authentications は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, token_digest TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL を持ち、user_id は users(id) を参照します。\n\nメールへ送るトークンそのものではなくダイジェスト、有効期限、使用済み時刻を保存する設計を学びます。used_at は未使用の間NULLを許可します。",
+  "statement": "users と magic_link_authentications テーブルを作成してください。\n\nmagic_link_authentications は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, token_digest TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL を持ち、user_id は users(id) を参照します。used_at はNULLを許可します。",
   "constraints": [
     { "name": "認証情報", "value": "token_digest, expires_at, used_at, created_at を定義します" },
     { "name": "外部キー", "value": "user_id は users.id を参照します" },

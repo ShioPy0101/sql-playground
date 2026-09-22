@@ -29,7 +29,7 @@
   },
   "slug": "saas-composite-foreign-key",
   "title": "[マルチテナント][書いてみよう] 複合外部キーでテナントをまたぐ参照を防ぐ",
-  "statement": "users と posts を作成し、別テナントのユーザーを投稿者として参照できない構造にしてください。\n\nusers は tenant_id INTEGER NOT NULL, id INTEGER NOT NULL, name TEXT NOT NULL を持ち、UNIQUE (tenant_id, id) を設定します。posts は id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL を持ちます。\n\nposts の (tenant_id, user_id) から users(tenant_id, id) へ複合外部キーを設定してください。これにより「そのユーザーが存在する」だけでなく「そのテナントにそのユーザーが存在する」ことまでDBが確認できます。",
+  "statement": "users と posts を作成し、別テナントのユーザーを投稿者として参照できない構造にしてください。\n\nusers は tenant_id INTEGER NOT NULL, id INTEGER NOT NULL, name TEXT NOT NULL を持ち、UNIQUE (tenant_id, id) を設定します。posts は id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL を持ちます。\n\nposts(tenant_id, user_id) から users(tenant_id, id) へ複合外部キーを設定します。",
   "constraints": [
     { "name": "複合ユニークキー", "value": "users に UNIQUE (tenant_id, id) を設定します" },
     { "name": "複合外部キー", "value": "posts(tenant_id, user_id) は users(tenant_id, id) を参照します" },

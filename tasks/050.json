@@ -28,7 +28,7 @@
   },
   "slug": "saas-join-posts-and-users",
   "title": "[JOIN][書いてみよう] 投稿とユーザー名を一緒に取得する",
-  "statement": "users と posts を JOIN し、投稿ID、投稿者名、本文を表示してください。\n\n出力する列は post_id, user_name, body です。posts.user_id と users.id を結合し、投稿IDの昇順で並べます。\n\n外部キーで表現した関連を、JOINで実際に取得してみましょう。",
+  "statement": "users と posts を JOIN し、投稿ID、投稿者名、本文を表示してください。\n\n出力する列は post_id, user_name, body です。posts.user_id と users.id を結合し、投稿IDの昇順で並べます。",
   "constraints": [
     { "name": "結合条件", "value": "posts.user_id = users.id で結合します" },
     { "name": "出力列", "value": "post_id, user_name, body の順で表示します" },

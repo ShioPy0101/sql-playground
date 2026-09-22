@@ -31,7 +31,7 @@
   },
   "slug": "saas-create-otp-authentications",
   "title": "[認証][書いてみよう] Email OTP の状態を保存する",
-  "statement": "users と otp_authentications テーブルを作成してください。\n\notp_authentications は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, code_digest TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL を持ち、user_id は users(id) を参照します。\n\n利用者がコードを入力するOTPでは、Magic Linkと共通の期限・使用済み状態に加えて、総当たりを抑えるための試行回数も管理します。",
+  "statement": "users と otp_authentications テーブルを作成してください。\n\notp_authentications は id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, code_digest TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL を持ち、user_id は users(id) を参照します。",
   "constraints": [
     { "name": "OTP情報", "value": "code_digest, expires_at, used_at, created_at を定義します" },
     { "name": "試行回数", "value": "attempt_count は INTEGER NOT NULL DEFAULT 0 にします" },

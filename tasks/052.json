@@ -30,7 +30,7 @@
   },
   "slug": "saas-tenant-id-alone-is-not-enough",
   "title": "[マルチテナント][確かめよう] tenant_id だけでは防げない",
-  "statement": "tenant_id を持つだけでは、別テナントのユーザーを投稿者に指定できてしまうことを確かめます。\n\nusers.id だけを参照する外部キーでは、投稿とユーザーの tenant_id が同じかまでは検証されません。用意されたSQLは、tenant_id = 1 の投稿に tenant_id = 2 のユーザーを設定し、その不整合な組み合わせを表示します。\n\nSQLを読み、実行・提出して結果を確認してください。",
+  "statement": "users.id だけを参照する外部キーでは、投稿とユーザーの tenant_id が同じかまでは検証されません。\n\n用意されたSQLで tenant_id = 1 の投稿に tenant_id = 2 のユーザーを設定し、不整合な組み合わせを表示してください。",
   "constraints": [
     { "name": "外部キー", "value": "posts.user_id は users.id だけを参照します" },
     { "name": "確認内容", "value": "投稿と投稿者の tenant_id が異なる行を作成します" },

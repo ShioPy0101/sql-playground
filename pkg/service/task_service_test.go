@@ -48,6 +48,42 @@ func TestTaskServiceSubmitComparesAllCases(t *testing.T) {
 	}
 }
 
+func TestTaskServiceSubmitNeverRunsConfiguredBenchmark(t *testing.T) {
+	taskDir := t.TempDir()
+	writeTaskFile(t, taskDir, "906.json", `{
+		"number": 906,
+		"mode": "sql",
+		"benchmark": {
+			"enabled": true,
+			"target": "submission",
+			"rowCounts": [1000000]
+		},
+		"title": "Separated benchmark",
+		"statement": "Submit must only grade.",
+		"constraints": [],
+		"csv": "id\n1",
+		"starterSql": "SELECT id FROM input;",
+		"solutionSql": "SELECT id FROM input;",
+		"expectedCsv": "id\n1\n",
+		"tests": [{
+			"name": "sample",
+			"csv": "id\n1",
+			"expectedCsv": "id\n1\n"
+		}]
+	}`)
+	t.Setenv("TASKS_DIR", taskDir)
+	t.Setenv("SQLITE_BENCHMARK_MAX_ROWS", "1")
+	service := newTestTaskService(t)
+
+	result, err := service.Submit("906", "SELECT id FROM input;")
+	if err != nil {
+		t.Fatalf("Submit returned error: %v", err)
+	}
+	if !result.Passed {
+		t.Fatalf("Submit() passed = false, want true: %#v", result)
+	}
+}
+
 func TestTaskServiceSubmitReportsWrongAnswer(t *testing.T) {
 	taskDir := t.TempDir()
 	writeTaskFile(t, taskDir, "008.json", `{

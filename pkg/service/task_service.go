@@ -29,34 +29,38 @@ type TaskTestCase struct {
 }
 
 type Task struct {
-	Number      int            `json:"number"`
-	Slug        string         `json:"slug"`
-	Title       string         `json:"title"`
-	Statement   string         `json:"statement"`
-	Constraints []Constraint   `json:"constraints"`
-	CSV         string         `json:"csv"`
-	StarterSQL  string         `json:"starterSql"`
-	SolutionSQL string         `json:"solutionSql"`
-	CheckSQL    string         `json:"checkSql"`
-	ExpectedCSV string         `json:"expectedCsv"`
-	Tests       []TaskTestCase `json:"tests"`
+	Number      int              `json:"number"`
+	Mode        string           `json:"mode,omitempty"`
+	Benchmark   *BenchmarkConfig `json:"benchmark,omitempty"`
+	Slug        string           `json:"slug"`
+	Title       string           `json:"title"`
+	Statement   string           `json:"statement"`
+	Constraints []Constraint     `json:"constraints"`
+	CSV         string           `json:"csv"`
+	StarterSQL  string           `json:"starterSql"`
+	SolutionSQL string           `json:"solutionSql"`
+	CheckSQL    string           `json:"checkSql"`
+	ExpectedCSV string           `json:"expectedCsv"`
+	Tests       []TaskTestCase   `json:"tests"`
 }
 
 type PublicTask struct {
-	Number      int          `json:"number"`
-	Slug        string       `json:"slug"`
-	Title       string       `json:"title"`
-	Statement   string       `json:"statement"`
-	Constraints []Constraint `json:"constraints"`
-	CSV         string       `json:"csv"`
-	StarterSQL  string       `json:"starterSql"`
-	SolutionSQL string       `json:"solutionSql"`
-	CheckSQL    string       `json:"checkSql"`
-	ExpectedCSV string       `json:"expectedCsv"`
-	TestCount   int          `json:"testCount"`
-	SavedQuery  string       `json:"savedQuery,omitempty"`
-	Answered    bool         `json:"answered"`
-	Solved      bool         `json:"solved"`
+	Number      int              `json:"number"`
+	Mode        string           `json:"mode,omitempty"`
+	Benchmark   *BenchmarkConfig `json:"benchmark,omitempty"`
+	Slug        string           `json:"slug"`
+	Title       string           `json:"title"`
+	Statement   string           `json:"statement"`
+	Constraints []Constraint     `json:"constraints"`
+	CSV         string           `json:"csv"`
+	StarterSQL  string           `json:"starterSql"`
+	SolutionSQL string           `json:"solutionSql"`
+	CheckSQL    string           `json:"checkSql"`
+	ExpectedCSV string           `json:"expectedCsv"`
+	TestCount   int              `json:"testCount"`
+	SavedQuery  string           `json:"savedQuery,omitempty"`
+	Answered    bool             `json:"answered"`
+	Solved      bool             `json:"solved"`
 }
 
 type PublicTaskSummary struct {
@@ -342,8 +346,18 @@ func (s *TaskService) executeTaskCase(task Task, test TaskTestCase, query string
 }
 
 func (s *TaskService) LoadTask(number string) (Task, error) {
+	return loadTaskFromSources(number, s.taskSources)
+}
+
+// LoadTaskDefinition reads task configuration without opening or using the
+// submission store. Benchmark endpoints use this isolated path.
+func LoadTaskDefinition(number string) (Task, error) {
+	return loadTaskFromSources(number, taskSources())
+}
+
+func loadTaskFromSources(number string, sources []taskSource) (Task, error) {
 	fileNames := taskFileNames(number)
-	for _, source := range s.taskSources {
+	for _, source := range sources {
 		for _, fileName := range fileNames {
 			content, err := fs.ReadFile(source.fs, fileName)
 			if err != nil {
@@ -406,6 +420,8 @@ func submissionsDBPath() string {
 func publicTask(task Task) PublicTask {
 	return PublicTask{
 		Number:      task.Number,
+		Mode:        task.Mode,
+		Benchmark:   task.Benchmark,
 		Slug:        task.Slug,
 		Title:       task.Title,
 		Statement:   task.Statement,

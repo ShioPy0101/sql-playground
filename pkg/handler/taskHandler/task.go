@@ -86,6 +86,25 @@ func (h *TaskHandler) Submit(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+func (h *TaskHandler) Benchmark(c echo.Context) error {
+	var req SubmitRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request body"})
+	}
+	task, err := service.LoadTaskDefinition(c.Param("number"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": err.Error()})
+	}
+	if task.Benchmark == nil || !task.Benchmark.Enabled {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "この課題では性能計測が設定されていません"})
+	}
+	report, err := service.NewBenchmarkService().Run(task.Mode, *task.Benchmark, req.Query)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, report)
+}
+
 func (h *TaskHandler) History(c echo.Context) error {
 	userID, err := ensureUserID(c)
 	if err != nil {

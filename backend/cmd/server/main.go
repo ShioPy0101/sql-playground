@@ -42,6 +42,7 @@ func main() {
 	taskAPI.GET("", taskHandlerInstance.List)
 	taskAPI.GET("/:number", taskHandlerInstance.Get)
 	taskAPI.POST("/:number/submit", taskHandlerInstance.Submit)
+	taskAPI.POST("/:number/benchmark", taskHandlerInstance.Benchmark)
 	taskAPI.GET("/:number/history", taskHandlerInstance.History)
 	adminAPI.GET("/submissions", taskHandlerInstance.AdminSubmissions)
 	adminAPI.POST("/check-solutions", taskHandlerInstance.AdminCheckSolutions)

@@ -54,7 +54,6 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
   const [error, setError] = useState("");
   const [historyError, setHistoryError] = useState("");
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
-  const [showSolution, setShowSolution] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBenchmarking, setIsBenchmarking] = useState(false);
 
@@ -68,7 +67,6 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
     setResult("");
     setMetrics(null);
     setSubmissions([]);
-    setShowSolution(false);
 
     const request = eventSlug ? fetchEventTask(eventSlug, number) : fetchTask(number);
     request
@@ -287,9 +285,6 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
           {userId ? <p className="user-chip">User {userId.replace(/^user_/, "").slice(0, 10)}</p> : null}
         </div>
         <div className="task-actions">
-          <button type="button" className="secondary-button" onClick={() => setShowSolution((current) => !current)}>
-            {showSolution ? "答えを隠す" : "答えを見る"}
-          </button>
           <button type="button" className="secondary-button" onClick={handleResetQuery} disabled={isSubmitting}>
             入力を最初に戻す
           </button>
@@ -311,22 +306,23 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
           onChange={setQuery}
         />
         {/* <EditorPanel title="CSV" label={tableLabel} value={task.csv} ariaLabel="Task CSV" readOnly /> */}
-        {showSolution ? (
-          <section className="solution-panel" aria-label="想定解答">
-            <div className="panel-heading">
-              <h2>想定解答</h2>
+        <details className="solution-panel">
+          <summary className="solution-summary">想定解答</summary>
+          <div className="solution-actions">
+            <span>解答例</span>
+            {task.solutionSql ? (
               <button type="button" className="text-button" onClick={() => setQuery(task.solutionSql)}>
                 入力へ反映
               </button>
-            </div>
-            <pre className="sql-preview">{task.solutionSql || "想定解答が登録されていません。"}</pre>
-          </section>
-        ) : null}
+            ) : null}
+          </div>
+          <pre className="sql-preview">{task.solutionSql || "想定解答が登録されていません。"}</pre>
+        </details>
         <ResultPanel
           result={result}
           error={error}
           metrics={metrics}
-          emptyText="実行するとサンプルに対する結果を確認できます。"
+          emptyText="提出するとサンプルに対する結果を確認できます。"
         />
         <JudgePanel result={judgeResult} />
         <BenchmarkPanel report={benchmarkReport} error={benchmarkError} running={isBenchmarking} />

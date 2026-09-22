@@ -191,3 +191,22 @@ func TestSQLiteServiceExecuteAndInspect(t *testing.T) {
 		t.Fatalf("ExecuteAndInspect() = %q, want %q", got, want)
 	}
 }
+
+func TestSQLiteServiceExecuteSQLInput(t *testing.T) {
+	service := NewSQLiteService()
+
+	got, err := service.ExecuteInput(
+		`CREATE TABLE scores (name TEXT PRIMARY KEY, score INTEGER UNIQUE);
+		 INSERT INTO scores (name, score) VALUES ('Ada', 82), ('Linus', 91);`,
+		"sql",
+		`SELECT name FROM scores ORDER BY score DESC;`,
+	)
+	if err != nil {
+		t.Fatalf("ExecuteInput returned error: %v", err)
+	}
+
+	want := "name\nLinus\nAda\n"
+	if got != want {
+		t.Fatalf("ExecuteInput() = %q, want %q", got, want)
+	}
+}

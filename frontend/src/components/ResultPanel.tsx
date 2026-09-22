@@ -13,8 +13,7 @@ type ResultPanelProps = {
 const metricDefinitions = [
   ["vmSteps", "実行ステップ数", "SQLite 内部で実行された処理量の目安"],
   ["fullScanSteps", "全表走査ステップ数", "インデックスを使わず、テーブルを順番に調べた回数"],
-  ["sortOperations", "ソート回数", "SQLite 内部でソート処理が行われた回数"],
-  ["autoIndexRows", "自動インデックス行数", "SQLite が一時的な自動インデックスを作成する際に処理した行数"]
+  ["sortOperations", "ソート回数", "SQLite 内部でソート処理が行われた回数"]
 ] as const;
 
 function formatDuration(durationMs: number) {

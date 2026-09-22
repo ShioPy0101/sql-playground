@@ -16,7 +16,6 @@ const benchmarkColumns = [
   ["実行ステップ数", "SQLite内部で実行された処理ステップの数。処理量を比べる目安になります"],
   ["全表走査ステップ数", "インデックスを使わず、テーブルを先頭から調べたステップの数"],
   ["ソート回数", "SQLite内部でソート処理が行われた回数"],
-  ["自動インデックス行数", "SQLiteが一時的な自動インデックスを作る際に処理した行数"],
   ["DBサイズ", "計測用データベースファイルの大きさ"],
   ["データ生成時間", "計測用のテーブルへデータを投入するまでにかかった時間"],
   ["実行計画", "SQLiteが選んだテーブルの読み方やインデックスの使い方"]
@@ -69,7 +68,6 @@ export function BenchmarkPanel({ report, error, running }: BenchmarkPanelProps) 
                   <td>{result.vmSteps.toLocaleString("ja-JP")}</td>
                   <td>{result.fullScanSteps.toLocaleString("ja-JP")}</td>
                   <td>{result.sortCount.toLocaleString("ja-JP")}</td>
-                  <td>{result.autoIndexRows.toLocaleString("ja-JP")}</td>
                   <td>{formatBytes(result.databaseSizeBytes)}</td>
                   <td>{result.dataGenerationMs.toFixed(1)} ms</td>
                   <td>

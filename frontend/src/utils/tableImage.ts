@@ -162,6 +162,8 @@ export async function renderTableAsPng(table: HTMLTableElement) {
       font-size: 34px;
       font-weight: 700;
       letter-spacing: 0.01em;
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
     .table-image-export td { background: #ffffff; }
     .table-image-export .is-numeric {

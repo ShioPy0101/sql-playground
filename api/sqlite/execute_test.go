@@ -32,6 +32,12 @@ func TestHandlerExecutesSQL(t *testing.T) {
 	if res.CSV != want {
 		t.Fatalf("expected csv %q, got %q", want, res.CSV)
 	}
+	if len(res.Metrics.Statements) != 1 {
+		t.Fatalf("expected one statement metric, got %d", len(res.Metrics.Statements))
+	}
+	if len(res.Metrics.Statements[0].QueryPlan) == 0 {
+		t.Fatal("expected a query plan for SELECT")
+	}
 }
 
 func TestHandlerExecutesSQLWithInspection(t *testing.T) {

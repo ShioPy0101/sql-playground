@@ -6,8 +6,25 @@ import (
 	"encoding/csv"
 )
 
-// rowsToCSV serializes a SELECT result set as CSV text.
-func rowsToCSV(rows *sql.Rows, columns []string) (string, error) {
+// readRows reads every SQLite row. Keep this separate from CSV serialization so
+// statement timing can stop as soon as SQLite has produced the complete result.
+func readRows(rows *sql.Rows, columnCount int) ([][]string, error) {
+	records := make([][]string, 0)
+	for rows.Next() {
+		record, err := scanCSVRecord(rows, columnCount)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+// recordsToCSV serializes values already read from SQLite.
+func recordsToCSV(columns []string, records [][]string) (string, error) {
 	var output bytes.Buffer
 	writer := csv.NewWriter(&output)
 
@@ -15,18 +32,10 @@ func rowsToCSV(rows *sql.Rows, columns []string) (string, error) {
 		return "", err
 	}
 
-	for rows.Next() {
-		record, err := scanCSVRecord(rows, len(columns))
-		if err != nil {
-			return "", err
-		}
-
+	for _, record := range records {
 		if err := writer.Write(record); err != nil {
 			return "", err
 		}
-	}
-	if err := rows.Err(); err != nil {
-		return "", err
 	}
 
 	writer.Flush()

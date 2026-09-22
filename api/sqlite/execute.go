@@ -16,7 +16,8 @@ type executeRequest struct {
 }
 
 type executeResponse struct {
-	CSV string `json:"csv"`
+	CSV     string                   `json:"csv"`
+	Metrics service.ExecutionMetrics `json:"metrics"`
 }
 
 type errorResponse struct {
@@ -44,7 +45,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resultCSV string
+	var result service.StatementExecutionResult
 	var err error
 	input := req.Input
 	inputType := req.InputType
@@ -53,9 +54,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		inputType = "csv"
 	}
 	if req.CheckSQL != "" {
-		resultCSV, err = sqliteService.ExecuteInputAndInspect(input, inputType, req.Query, req.CheckSQL)
+		result, err = sqliteService.ExecuteInputAndInspectWithStats(input, inputType, req.Query, req.CheckSQL)
 	} else {
-		resultCSV, err = sqliteService.ExecuteInput(input, inputType, req.Query)
+		result, err = sqliteService.ExecuteInputWithStats(input, inputType, req.Query)
 	}
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{
@@ -65,7 +66,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, executeResponse{
-		CSV: resultCSV,
+		CSV:     result.CSV,
+		Metrics: result.Metrics,
 	})
 }
 

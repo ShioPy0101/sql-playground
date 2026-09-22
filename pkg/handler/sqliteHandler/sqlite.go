@@ -8,12 +8,16 @@ import (
 )
 
 type ExecuteRequest struct {
-	CSV   string `json:"csv"`
-	Query string `json:"query"`
+	CSV       string `json:"csv"`
+	Input     string `json:"input"`
+	InputType string `json:"inputType"`
+	Query     string `json:"query"`
+	CheckSQL  string `json:"checkSql"`
 }
 
 type ExecuteResponse struct {
-	CSV string `json:"csv"`
+	CSV     string                   `json:"csv"`
+	Metrics service.ExecutionMetrics `json:"metrics"`
 }
 
 type SQLiteHandler struct {
@@ -35,7 +39,20 @@ func (h *SQLiteHandler) Execute(c echo.Context) error {
 		})
 	}
 
-	resultCSV, err := h.service.Execute(req.CSV, req.Query)
+	input := req.Input
+	inputType := req.InputType
+	if inputType == "" {
+		input = req.CSV
+		inputType = "csv"
+	}
+
+	var result service.StatementExecutionResult
+	var err error
+	if req.CheckSQL != "" {
+		result, err = h.service.ExecuteInputAndInspectWithStats(input, inputType, req.Query, req.CheckSQL)
+	} else {
+		result, err = h.service.ExecuteInputWithStats(input, inputType, req.Query)
+	}
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": err.Error(),
@@ -43,6 +60,7 @@ func (h *SQLiteHandler) Execute(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, ExecuteResponse{
-		CSV: resultCSV,
+		CSV:     result.CSV,
+		Metrics: result.Metrics,
 	})
 }

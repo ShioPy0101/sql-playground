@@ -1,5 +1,12 @@
 {
   "number": 45,
+  "mode": "ddl",
+  "benchmark": {
+    "enabled": true,
+    "target": "fixed-query",
+    "query": "SELECT * FROM orders WHERE customer_id = 42;",
+    "rowCounts": [1000, 10000, 50000, 100000]
+  },
   "slug": "table-design-create-orders-with-indexes",
   "title": "[テーブル設計][書いてみよう] 検索に使う列へインデックスを作成する",
   "statement": "注文を保存する orders テーブルを CREATE TABLE で作成し、よく検索に使う列へインデックスを作成してください。\n\n必要な列は id, customer_id, ordered_at, status, total です。id は INTEGER PRIMARY KEY、customer_id は INTEGER NOT NULL、ordered_at と status は TEXT NOT NULL、total は INTEGER NOT NULL にします。\n\nこのテーブルでは「特定の顧客の注文を探す」「日付で注文を絞り込む」検索が多い想定です。そのため customer_id に idx_orders_customer_id、ordered_at に idx_orders_ordered_at という通常のインデックスを作成します。\n\nインデックスは本の索引のようなもので、WHERE customer_id = ... や WHERE ordered_at >= ... のような検索を速くしやすくします。ただし、書き込み時にはインデックスも更新されるため、何でも貼るのではなく検索条件としてよく使う列に絞るのが基本です。",

@@ -13,9 +13,12 @@ import (
 	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
 
+var benchmarkOrdersSelectPattern = regexp.MustCompile(`(?is)^\s*SELECT\s+\*\s+FROM\s+orders\s+WHERE\s+customer_id\s*=\s*42\s*$`)
+
 var benchmarkSelectPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?is)^\s*SELECT\s+\*\s+FROM\s+posts\s+WHERE\s+tenant_id\s*=\s*42\s*$`),
 	regexp.MustCompile(`(?is)^\s*SELECT\s+\*\s+FROM\s+posts\s+WHERE\s+tenant_id\s*=\s*42\s+AND\s+user_id\s*=\s*12345\s*$`),
+	benchmarkOrdersSelectPattern,
 }
 
 var benchmarkDDLPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b`)
@@ -95,32 +98,12 @@ func runBenchmarkStage(rowCount int, taskMode string, setupSQL string, query str
 		if _, err := db.ExecContext(ctx, setupSQL); err != nil {
 			return BenchmarkResult{}, fmt.Errorf("受講者DDL適用: %w", err)
 		}
-	} else if _, err := db.ExecContext(ctx, `
-		CREATE TABLE posts (
-			id INTEGER PRIMARY KEY,
-			tenant_id INTEGER NOT NULL,
-			user_id INTEGER NOT NULL,
-			body TEXT NOT NULL
-		);
-	`); err != nil {
+	} else if _, err := db.ExecContext(ctx, benchmarkSchema(query)); err != nil {
 		return BenchmarkResult{}, fmt.Errorf("計測用schema作成: %w", err)
 	}
 
 	generationStartedAt := time.Now()
-	if _, err := db.ExecContext(ctx, fmt.Sprintf(`
-		WITH RECURSIVE sequence(row_number) AS (
-			SELECT 1
-			UNION ALL
-			SELECT row_number + 1 FROM sequence WHERE row_number < %d
-		)
-		INSERT INTO posts (id, tenant_id, user_id, body)
-		SELECT
-			row_number,
-			(row_number %% 100) + 1,
-			(row_number %% 50000) + 1,
-			'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-		FROM sequence;
-	`, rowCount)); err != nil {
+	if _, err := db.ExecContext(ctx, benchmarkDataSQL(query, rowCount)); err != nil {
 		return BenchmarkResult{}, fmt.Errorf("テストデータ生成: %w", err)
 	}
 	generationDuration := time.Since(generationStartedAt)
@@ -154,6 +137,62 @@ func runBenchmarkStage(rowCount int, taskMode string, setupSQL string, query str
 	}, nil
 }
 
+func benchmarkSchema(query string) string {
+	if benchmarkTable(query) == "orders" {
+		return `
+			CREATE TABLE orders (
+				id INTEGER PRIMARY KEY,
+				customer_id INTEGER NOT NULL,
+				ordered_at TEXT NOT NULL,
+				status TEXT NOT NULL,
+				total INTEGER NOT NULL
+			);
+		`
+	}
+	return `
+		CREATE TABLE posts (
+			id INTEGER PRIMARY KEY,
+			tenant_id INTEGER NOT NULL,
+			user_id INTEGER NOT NULL,
+			body TEXT NOT NULL
+		);
+	`
+}
+
+func benchmarkDataSQL(query string, rowCount int) string {
+	if benchmarkTable(query) == "orders" {
+		return fmt.Sprintf(`
+			WITH RECURSIVE sequence(row_number) AS (
+				SELECT 1
+				UNION ALL
+				SELECT row_number + 1 FROM sequence WHERE row_number < %d
+			)
+			INSERT INTO orders (id, customer_id, ordered_at, status, total)
+			SELECT
+				row_number,
+				(row_number %% 100) + 1,
+				printf('2026-%%02d-%%02d', ((row_number - 1) %% 12) + 1, ((row_number - 1) %% 28) + 1),
+				CASE WHEN row_number %% 4 = 0 THEN 'canceled' ELSE 'paid' END,
+				(row_number %% 5000) + 100
+			FROM sequence;
+		`, rowCount)
+	}
+	return fmt.Sprintf(`
+		WITH RECURSIVE sequence(row_number) AS (
+			SELECT 1
+			UNION ALL
+			SELECT row_number + 1 FROM sequence WHERE row_number < %d
+		)
+		INSERT INTO posts (id, tenant_id, user_id, body)
+		SELECT
+			row_number,
+			(row_number %% 100) + 1,
+			(row_number %% 50000) + 1,
+			'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+		FROM sequence;
+	`, rowCount)
+}
+
 func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string) (query string, setupSQL string, err error) {
 	switch {
 	case taskMode == "sql" && config.Target == "submission":
@@ -164,7 +203,7 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 		return strings.TrimSpace(statements[0]), "", nil
 	case taskMode == "ddl" && config.Target == "fixed-query":
 		if !matchesBenchmarkSelect(config.Query) {
-			return "", "", fmt.Errorf("benchmark.queryは許可されたposts SELECTではありません")
+			return "", "", fmt.Errorf("benchmark.queryは許可されたSELECTではありません")
 		}
 		statements := helper.SplitSQLStatements(submission)
 		if len(statements) == 0 {
@@ -179,6 +218,14 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 	default:
 		return "", "", fmt.Errorf("benchmarkのmodeとtargetの組み合わせが不正です")
 	}
+}
+
+func benchmarkTable(query string) string {
+	trimmed := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(query), ";"))
+	if benchmarkOrdersSelectPattern.MatchString(trimmed) {
+		return "orders"
+	}
+	return "posts"
 }
 
 func matchesBenchmarkSelect(statement string) bool {

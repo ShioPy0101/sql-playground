@@ -26,7 +26,7 @@
     },
     {
       "source": "/api/admin/events/:slug/tasks",
-      "destination": "/api/admin/events/tasks?slug=:slug"
+	  "destination": "/api/admin/events/show?slug=:slug"
     },
     {
       "source": "/api/admin/events/:slug",

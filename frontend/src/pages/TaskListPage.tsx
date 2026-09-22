@@ -66,6 +66,7 @@ export function TaskListPage() {
                   {task.solved ? <span className="status-badge solved">正解済み</span> : null}
                 </div>
                 <h2>{task.title}</h2>
+                {task.note ? <p className="task-note">備考: {task.note}</p> : null}
                 <p className="task-summary">{task.statement}</p>
               </div>
               <span className="case-count">{task.testCount} cases</span>

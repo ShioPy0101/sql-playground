@@ -27,12 +27,17 @@ type EventPage struct {
 
 type AdminEventDetail struct {
 	Event
-	TaskNumbers      []int              `json:"taskNumbers"`
-	Participants     []EventParticipant `json:"participants"`
-	Submissions      []EventSubmission  `json:"submissions"`
-	ParticipantCount int                `json:"participantCount"`
-	SubmitterCount   int                `json:"submitterCount"`
-	SubmissionCount  int                `json:"submissionCount"`
+	TaskNumbers      []int               `json:"taskNumbers"`
+	Tasks            []PublicTaskSummary `json:"tasks"`
+	Participants     []EventParticipant  `json:"participants"`
+	Submissions      []EventSubmission   `json:"submissions"`
+	ParticipantCount int                 `json:"participantCount"`
+	SubmitterCount   int                 `json:"submitterCount"`
+	SubmissionCount  int                 `json:"submissionCount"`
+}
+
+type UpdateEventTasksInput struct {
+	TaskNumbers []int `json:"taskNumbers"`
 }
 
 func (s *TaskService) CreateEvent(input CreateEventInput) (Event, error) {
@@ -202,6 +207,14 @@ func (s *TaskService) AdminEvent(slug string) (AdminEventDetail, error) {
 	if err != nil {
 		return AdminEventDetail{}, err
 	}
+	tasks := make([]PublicTaskSummary, 0, len(numbers))
+	for _, number := range numbers {
+		task, loadErr := s.LoadTask(strconv.Itoa(number))
+		if loadErr != nil {
+			return AdminEventDetail{}, loadErr
+		}
+		tasks = append(tasks, publicTaskSummary(task))
+	}
 	participants, err := s.submissions.EventParticipants(event.ID)
 	if err != nil {
 		return AdminEventDetail{}, err
@@ -215,7 +228,28 @@ func (s *TaskService) AdminEvent(slug string) (AdminEventDetail, error) {
 		submitters[submission.UserID] = true
 	}
 	return AdminEventDetail{
-		Event: event, TaskNumbers: numbers, Participants: participants, Submissions: submissions,
+		Event: event, TaskNumbers: numbers, Tasks: tasks, Participants: participants, Submissions: submissions,
 		ParticipantCount: len(participants), SubmitterCount: len(submitters), SubmissionCount: len(submissions),
 	}, nil
+}
+
+func (s *TaskService) UpdateEventTasks(slug string, taskNumbers []int) (AdminEventDetail, error) {
+	event, err := s.submissions.EventBySlug(slug)
+	if err != nil {
+		return AdminEventDetail{}, fmt.Errorf("event %s was not found", slug)
+	}
+	seen := make(map[int]bool, len(taskNumbers))
+	for _, number := range taskNumbers {
+		if seen[number] {
+			return AdminEventDetail{}, fmt.Errorf("task %d is duplicated", number)
+		}
+		seen[number] = true
+		if _, err := s.LoadTask(strconv.Itoa(number)); err != nil {
+			return AdminEventDetail{}, err
+		}
+	}
+	if err := s.submissions.UpdateEventTasks(event.ID, taskNumbers); err != nil {
+		return AdminEventDetail{}, err
+	}
+	return s.AdminEvent(slug)
 }

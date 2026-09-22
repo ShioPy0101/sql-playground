@@ -1,0 +1,9 @@
+{
+  "number":63,"mode":"sql","slug":"advanced-tenant-safe-join","title":"[応用] JOINでもテナント境界を守る","note":"[スライド範囲外]",
+  "statement":"複数の藩が同じSaaSを利用しています。tenant_id = 2 のメッセージだけを投稿者名とともに取得してください。users.idはテナント内でのみ一意なので、JOIN条件にもtenant_idを含め、他藩の同じuser_idを混ぜないでください。結果はmessage_id順です。",
+  "constraints":[{"name":"境界","value":"messagesとusersのtenant_idおよびuser_idを両方一致させる"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE users (tenant_id INTEGER NOT NULL, id INTEGER NOT NULL, name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL); INSERT INTO users VALUES (1,1,'坂本龍馬'),(2,1,'西郷隆盛'),(2,2,'大久保利通'); INSERT INTO messages VALUES (10,2,1,'改革案'),(11,1,1,'海援隊'),(12,2,2,'会議');",
+  "starterSql":"SELECT m.id AS message_id, u.name, m.body\nFROM messages m\nJOIN users u ON -- tenant境界を含める\nWHERE m.tenant_id = 2\nORDER BY m.id;",
+  "solutionSql":"SELECT m.id AS message_id, u.name, m.body FROM messages m JOIN users u ON u.tenant_id = m.tenant_id AND u.id = m.user_id WHERE m.tenant_id = 2 ORDER BY m.id;",
+  "expectedCsv":"message_id,name,body\n10,西郷隆盛,改革案\n12,大久保利通,会議\n","tests":[{"name":"同じuser_idを持つ別tenantを除外","expectedCsv":"message_id,name,body\n10,西郷隆盛,改革案\n12,大久保利通,会議\n"}]
+}

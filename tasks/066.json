@@ -1,0 +1,9 @@
+{
+  "number":66,"mode":"sql","slug":"advanced-group-having-organizations","title":"[応用] JOIN集計とHAVINGで活発な藩を探す","note":"[スライド範囲外]",
+  "statement":"運営は2026年4月以降に3件以上のメッセージがある藩だけを表彰します。organizationsとmessagesをJOINし、藩名とmessage_countを集計してください。WHEREで期間を絞り、HAVINGで件数を絞り、件数降順・藩名昇順に並べます。",
+  "constraints":[{"name":"集計","value":"GROUP BYとHAVING COUNT(*) >= 3を使う"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE organizations (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY, organization_id INTEGER NOT NULL, created_at TEXT NOT NULL); INSERT INTO organizations VALUES (1,'土佐藩'),(2,'薩摩藩'),(3,'長州藩'); INSERT INTO messages VALUES (1,1,'2026-04-01'),(2,1,'2026-04-02'),(3,1,'2026-04-03'),(4,1,'2026-03-01'),(5,2,'2026-04-01'),(6,2,'2026-04-02'),(7,3,'2026-04-01'),(8,3,'2026-04-02'),(9,3,'2026-04-03'),(10,3,'2026-04-04');",
+  "starterSql":"SELECT o.name, COUNT(*) AS message_count\nFROM organizations o JOIN messages m ON m.organization_id=o.id\nWHERE m.created_at >= '2026-04-01'\nGROUP BY o.id, o.name\nHAVING -- 件数条件\nORDER BY message_count DESC, o.name;",
+  "solutionSql":"SELECT o.name, COUNT(*) AS message_count FROM organizations o JOIN messages m ON m.organization_id=o.id WHERE m.created_at >= '2026-04-01' GROUP BY o.id,o.name HAVING COUNT(*) >= 3 ORDER BY message_count DESC,o.name;",
+  "expectedCsv":"name,message_count\n長州藩,4\n土佐藩,3\n","tests":[{"name":"期間とHAVINGの適用","expectedCsv":"name,message_count\n長州藩,4\n土佐藩,3\n"}]
+}

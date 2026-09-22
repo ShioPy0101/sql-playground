@@ -1,0 +1,9 @@
+{
+  "number":73,"mode":"sql","slug":"advanced-exists-active-organizations","title":"[応用] EXISTSで活動中の藩だけを抽出する","note":"[スライド範囲外]",
+  "statement":"2026年4月以降の投稿が1件でも存在する藩を抽出します。JOINによる行の重複を避け、organizationsの各行に対するEXISTS相関副問い合わせを使ってください。",
+  "constraints":[{"name":"存在判定","value":"EXISTSとorganization_idの相関条件を使う"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE organizations (id INTEGER PRIMARY KEY,name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY,organization_id INTEGER NOT NULL,created_at TEXT NOT NULL); INSERT INTO organizations VALUES (1,'土佐藩'),(2,'薩摩藩'),(3,'長州藩'); INSERT INTO messages VALUES (1,1,'2026-03-01'),(2,1,'2026-04-01'),(3,1,'2026-04-02'),(4,3,'2026-05-01');",
+  "starterSql":"SELECT o.id,o.name FROM organizations o WHERE EXISTS (SELECT 1 FROM messages m WHERE -- 相関条件と期間) ORDER BY o.id;",
+  "solutionSql":"SELECT o.id,o.name FROM organizations o WHERE EXISTS (SELECT 1 FROM messages m WHERE m.organization_id=o.id AND m.created_at>='2026-04-01') ORDER BY o.id;",
+  "expectedCsv":"id,name\n1,土佐藩\n3,長州藩\n","tests":[{"name":"投稿数によらず藩を1行で返す","expectedCsv":"id,name\n1,土佐藩\n3,長州藩\n"}]
+}

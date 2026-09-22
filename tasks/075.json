@@ -1,0 +1,9 @@
+{
+  "number":75,"mode":"sql","slug":"advanced-union-vs-union-all","title":"[応用] UNIONとUNION ALLを要件で使い分ける","note":"[スライド範囲外]",
+  "statement":"現役と退役の名簿から連絡先emailの一意な一覧を作ります。同じemailが両方にある場合も1行だけにする必要があります。重複を残すUNION ALLではなく、重複を除去する集合演算を選び、email順に返してください。",
+  "constraints":[{"name":"集合演算","value":"重複を除去するUNIONを使う"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE active_members (email TEXT NOT NULL); CREATE TABLE retired_members (email TEXT NOT NULL); INSERT INTO active_members VALUES ('a@example.jp'),('b@example.jp'); INSERT INTO retired_members VALUES ('b@example.jp'),('c@example.jp');",
+  "starterSql":"SELECT email FROM active_members\n-- 適切な集合演算\nSELECT email FROM retired_members\nORDER BY email;",
+  "solutionSql":"SELECT email FROM active_members UNION SELECT email FROM retired_members ORDER BY email;",
+  "expectedCsv":"email\na@example.jp\nb@example.jp\nc@example.jp\n","tests":[{"name":"重複emailを1行にする","expectedCsv":"email\na@example.jp\nb@example.jp\nc@example.jp\n"}]
+}

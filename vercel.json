@@ -25,6 +25,10 @@
       "destination": "/api/events?action=show&slug=:slug"
     },
     {
+      "source": "/api/admin/events/:slug/tasks",
+      "destination": "/api/admin/events/tasks?slug=:slug"
+    },
+    {
       "source": "/api/admin/events/:slug",
       "destination": "/api/admin/events/show?slug=:slug"
     },

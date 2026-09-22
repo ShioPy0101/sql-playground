@@ -1,0 +1,9 @@
+{
+  "number":60,"mode":"ddl","slug":"advanced-index-column-order","title":"[応用] インデックス列順序を検索条件に合わせる","note":"[スライド範囲外]",
+  "statement":"藩ごとの監査ログを時系列で取得します。SELECT * FROM audit_logs WHERE tenant_id = 42 ORDER BY created_at DESC LIMIT 100; に対し、同じ列でも created_at, tenant_id の順ではtenant絞り込みを活かせません。検索条件に合う列順でインデックスを設計してください。名前は自由です。",
+  "constraints":[{"name":"列順","value":"tenant_idを先頭、created_atを2番目にする"}],"csv":"",
+  "starterSql":"CREATE TABLE audit_logs (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, action TEXT NOT NULL, created_at TEXT NOT NULL);",
+  "solutionSql":"CREATE TABLE audit_logs (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, action TEXT NOT NULL, created_at TEXT NOT NULL);\nCREATE INDEX idx_audit_tenant_created ON audit_logs(tenant_id, created_at);",
+  "checkSql":"SELECT EXISTS (SELECT 1 FROM pragma_index_list('audit_logs') il WHERE (SELECT group_concat(name, ',') FROM pragma_index_info(il.name) ORDER BY seqno) = 'tenant_id,created_at') AS ok;","expectedCsv":"ok\n1\n","tests":[{"name":"検索条件に合う列順","csv":"","expectedCsv":"ok\n1\n"}],
+  "benchmark":{"enabled":true,"runOnFailed":true,"timeoutMs":5000,"target":"fixed-query","query":"SELECT * FROM audit_logs WHERE tenant_id = 42 ORDER BY created_at DESC LIMIT 100;","rowCounts":[1000,10000,50000,100000],"dataset":{"table":"audit_logs","columns":[{"name":"id","type":"INTEGER","expression":"row_number"},{"name":"tenant_id","type":"INTEGER","expression":"(row_number % 100) + 1"},{"name":"action","type":"TEXT","expression":"printf('action-%d', row_number)"},{"name":"created_at","type":"TEXT","expression":"printf('2026-01-%02d 12:%02d:00', ((row_number-1)%28)+1, row_number%60)"}]}}
+}

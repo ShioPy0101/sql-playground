@@ -1,0 +1,9 @@
+{
+  "number":69,"mode":"sql","slug":"advanced-correlated-latest-message","title":"[応用] 相関サブクエリで各藩士の最新投稿を得る","note":"[スライド範囲外]",
+  "statement":"各藩士について最新メッセージ本文を表示します。外側のusers.idを参照する相関サブクエリを使い、created_at降順・id降順の先頭1件を取得してください。未投稿者はNULLのまま含めます。",
+  "constraints":[{"name":"副問い合わせ","value":"各userに対してORDER BY ... LIMIT 1で最新行を選ぶ"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL); INSERT INTO users VALUES (1,'坂本龍馬'),(2,'武市半平太'),(3,'中岡慎太郎'); INSERT INTO messages VALUES (1,1,'最初','2026-01-01'),(2,1,'最新','2026-01-02'),(3,2,'檄文','2026-01-03');",
+  "starterSql":"SELECT u.name, (SELECT m.body FROM messages m WHERE m.user_id=u.id ORDER BY -- 最新順 LIMIT 1) AS latest_body FROM users u ORDER BY u.id;",
+  "solutionSql":"SELECT u.name,(SELECT m.body FROM messages m WHERE m.user_id=u.id ORDER BY m.created_at DESC,m.id DESC LIMIT 1) AS latest_body FROM users u ORDER BY u.id;",
+  "expectedCsv":"name,latest_body\n坂本龍馬,最新\n武市半平太,檄文\n中岡慎太郎,\n","tests":[{"name":"未投稿者を含む最新投稿","expectedCsv":"name,latest_body\n坂本龍馬,最新\n武市半平太,檄文\n中岡慎太郎,\n"}]
+}

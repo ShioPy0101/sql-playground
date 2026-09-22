@@ -1,0 +1,8 @@
+{
+  "number":62,"mode":"ddl","slug":"advanced-composite-primary-key","title":"[応用] 複合主キーで藩の所属を一意にする","note":"[スライド範囲外]",
+  "statement":"一人の藩士は複数の藩に所属できますが、同じ藩への所属は一度だけです。organization_membershipsに organization_id, user_id, role を定義し、organization_idとuser_idの組を主キーにしてください。",
+  "constraints":[{"name":"主キー","value":"PRIMARY KEY (organization_id, user_id)"},{"name":"必須","value":"roleを含む全列をNOT NULLにする"}],"csv":"",
+  "starterSql":"CREATE TABLE organization_memberships (\n  organization_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  role TEXT NOT NULL\n  -- 複合主キーを追加\n);",
+  "solutionSql":"CREATE TABLE organization_memberships (organization_id INTEGER NOT NULL, user_id INTEGER NOT NULL, role TEXT NOT NULL, PRIMARY KEY (organization_id, user_id));",
+  "checkSql":"SELECT group_concat(name, ',') AS primary_key_columns FROM (SELECT name FROM pragma_table_info('organization_memberships') WHERE pk > 0 ORDER BY pk);","expectedCsv":"primary_key_columns\n\"organization_id,user_id\"\n","tests":[{"name":"複合主キーの順序","csv":"","expectedCsv":"primary_key_columns\n\"organization_id,user_id\"\n"}]
+}

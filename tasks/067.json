@@ -1,0 +1,9 @@
+{
+  "number":67,"mode":"ddl","slug":"advanced-basic-compound-index","title":"[応用] 複合インデックスの基本を身につける","note":"[スライド範囲外]",
+  "statement":"藩士向けSaaSのタイムラインでは SELECT * FROM messages WHERE tenant_id = 42 ORDER BY created_at DESC LIMIT 50; が頻繁に実行されます。tenant_idで絞り込み、その中をcreated_at順に読める複合インデックスを作成してください。名前は自由です。",
+  "constraints":[{"name":"列順","value":"tenant_id, created_at の順"}],"csv":"",
+  "starterSql":"CREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL);",
+  "solutionSql":"CREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL); CREATE INDEX idx_messages_tenant_created ON messages(tenant_id, created_at);",
+  "checkSql":"SELECT EXISTS (SELECT 1 FROM pragma_index_list('messages') il WHERE (SELECT group_concat(name, ',') FROM pragma_index_info(il.name) ORDER BY seqno)='tenant_id,created_at') AS ok;","expectedCsv":"ok\n1\n","tests":[{"name":"2列複合インデックス","csv":"","expectedCsv":"ok\n1\n"}],
+  "benchmark":{"enabled":true,"runOnFailed":true,"timeoutMs":5000,"target":"fixed-query","query":"SELECT * FROM messages WHERE tenant_id=42 ORDER BY created_at DESC LIMIT 50;","rowCounts":[1000,10000,50000,100000],"dataset":{"table":"messages","columns":[{"name":"id","type":"INTEGER","expression":"row_number"},{"name":"tenant_id","type":"INTEGER","expression":"(row_number%100)+1"},{"name":"body","type":"TEXT","expression":"printf('body-%d',row_number)"},{"name":"created_at","type":"TEXT","expression":"printf('2026-01-%02d 12:%02d:00',((row_number-1)%28)+1,row_number%60)"}]}}
+}

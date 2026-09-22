@@ -77,7 +77,7 @@ export function EventPage({ slug }: { slug: string }) {
           <section className="task-list" aria-label="イベント課題一覧">
             {page.tasks.map((task, index) => (
               <a className="task-list-item" href={`/events/${slug}/tasks/${task.number}`} key={task.number}>
-                <div><div className="task-list-meta"><span className="task-number">#{index + 1}</span>{task.solved ? <span className="status-badge solved">正解済み</span> : task.answered ? <span className="status-badge answered">提出済み</span> : null}</div><h2>{task.title}</h2></div>
+                <div><div className="task-list-meta"><span className="task-number">#{index + 1}</span>{task.solved ? <span className="status-badge solved">正解済み</span> : task.answered ? <span className="status-badge answered">提出済み</span> : null}</div><h2>{task.title}</h2>{task.note ? <p className="task-note">備考: {task.note}</p> : null}</div>
                 <span className="case-count">{task.testCount || 1} cases</span>
               </a>
             ))}

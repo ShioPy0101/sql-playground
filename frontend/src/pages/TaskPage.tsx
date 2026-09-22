@@ -129,7 +129,7 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
           return;
         }
 
-        const tasks = [...payload.tasks].sort((a, b) => a.number - b.number);
+        const tasks = eventSlug ? payload.tasks : [...payload.tasks].sort((a, b) => a.number - b.number);
         const currentIndex = tasks.findIndex((summary) => String(summary.number) === number);
         setTaskNavigation({
           previousNumber: currentIndex > 0 ? tasks[currentIndex - 1].number : undefined,

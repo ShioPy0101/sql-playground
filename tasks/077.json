@@ -1,0 +1,9 @@
+{
+  "number":77,"mode":"sql","slug":"advanced-conditional-aggregation","title":"[応用] CASE式で複合条件付き集計を行う","note":"[スライド範囲外]",
+  "statement":"各tenantのメッセージ総数、未削除数、2026年4月以降の未削除数を1回のGROUP BYで集計します。SUM(CASE WHEN ... THEN 1 ELSE 0 END)を使い、NULL判定と期間条件を組み合わせてください。",
+  "constraints":[{"name":"条件付き集計","value":"SUMとCASEでactive_count、recent_active_countを計算"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE messages (id INTEGER PRIMARY KEY,tenant_id INTEGER NOT NULL,created_at TEXT NOT NULL,deleted_at TEXT); INSERT INTO messages VALUES (1,1,'2026-03-01',NULL),(2,1,'2026-04-01',NULL),(3,1,'2026-04-02','2026-04-03'),(4,2,'2026-04-01',NULL),(5,2,'2026-05-01',NULL);",
+  "starterSql":"SELECT tenant_id,COUNT(*) AS total_count, SUM(CASE WHEN -- 未削除 THEN 1 ELSE 0 END) AS active_count, SUM(CASE WHEN -- 期間内かつ未削除 THEN 1 ELSE 0 END) AS recent_active_count FROM messages GROUP BY tenant_id ORDER BY tenant_id;",
+  "solutionSql":"SELECT tenant_id,COUNT(*) total_count,SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) active_count,SUM(CASE WHEN deleted_at IS NULL AND created_at>='2026-04-01' THEN 1 ELSE 0 END) recent_active_count FROM messages GROUP BY tenant_id ORDER BY tenant_id;",
+  "expectedCsv":"tenant_id,total_count,active_count,recent_active_count\n1,3,2,1\n2,2,2,2\n","tests":[{"name":"複数指標を1回で集計","expectedCsv":"tenant_id,total_count,active_count,recent_active_count\n1,3,2,1\n2,2,2,2\n"}]
+}

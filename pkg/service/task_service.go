@@ -37,6 +37,7 @@ type Task struct {
 	Benchmark   *BenchmarkConfig `json:"benchmark,omitempty"`
 	Slug        string           `json:"slug"`
 	Title       string           `json:"title"`
+	Note        string           `json:"note,omitempty"`
 	Statement   string           `json:"statement"`
 	Constraints []Constraint     `json:"constraints"`
 	CSV         string           `json:"csv"`
@@ -55,6 +56,7 @@ type PublicTask struct {
 	Benchmark   *BenchmarkConfig `json:"benchmark,omitempty"`
 	Slug        string           `json:"slug"`
 	Title       string           `json:"title"`
+	Note        string           `json:"note,omitempty"`
 	Statement   string           `json:"statement"`
 	Constraints []Constraint     `json:"constraints"`
 	CSV         string           `json:"csv"`
@@ -72,8 +74,10 @@ type PublicTask struct {
 
 type PublicTaskSummary struct {
 	Number    int        `json:"number"`
+	Mode      string     `json:"mode,omitempty"`
 	Slug      string     `json:"slug"`
 	Title     string     `json:"title"`
+	Note      string     `json:"note,omitempty"`
 	Statement string     `json:"statement"`
 	TestCount int        `json:"testCount"`
 	Answered  bool       `json:"answered"`
@@ -456,6 +460,7 @@ func publicTask(task Task) PublicTask {
 		Benchmark:   task.Benchmark,
 		Slug:        task.Slug,
 		Title:       task.Title,
+		Note:        task.Note,
 		Statement:   task.Statement,
 		Constraints: task.Constraints,
 		CSV:         task.CSV,
@@ -472,8 +477,10 @@ func publicTask(task Task) PublicTask {
 func publicTaskSummary(task Task) PublicTaskSummary {
 	return PublicTaskSummary{
 		Number:    task.Number,
+		Mode:      task.Mode,
 		Slug:      task.Slug,
 		Title:     task.Title,
+		Note:      task.Note,
 		Statement: task.Statement,
 		TestCount: len(task.Tests),
 	}

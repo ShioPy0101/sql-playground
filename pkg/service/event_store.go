@@ -176,6 +176,28 @@ func (s *SubmissionStore) EventTaskNumbers(eventID int64) ([]int, error) {
 	return numbers, rows.Err()
 }
 
+func (s *SubmissionStore) UpdateEventTasks(eventID int64, taskNumbers []int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var exists int
+	if err := tx.QueryRow(s.rebind(`SELECT 1 FROM events WHERE id = ?`), eventID).Scan(&exists); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(s.rebind(`DELETE FROM event_tasks WHERE event_id = ?`), eventID); err != nil {
+		return err
+	}
+	for index, number := range taskNumbers {
+		if _, err := tx.Exec(s.rebind(`INSERT INTO event_tasks (event_id, task_number, position) VALUES (?, ?, ?)`), eventID, number, index+1); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (s *SubmissionStore) EventHasTask(eventID int64, taskNumber int) (bool, error) {
 	var exists int
 	err := s.db.QueryRow(s.rebind(`SELECT 1 FROM event_tasks WHERE event_id = ? AND task_number = ?`), eventID, taskNumber).Scan(&exists)

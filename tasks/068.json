@@ -1,0 +1,9 @@
+{
+  "number":68,"mode":"sql","slug":"advanced-not-exists-silent-users","title":"[応用] NOT EXISTSで未投稿の藩士を探す","note":"[スライド範囲外]",
+  "statement":"督促対象として、一度も投稿していない藩士を取得します。NOT EXISTSを使い、usersの各行に対応するmessagesが存在しないことを相関条件で判定してください。名前順で返します。",
+  "constraints":[{"name":"方式","value":"NOT EXISTSとusers.idに関連する副問い合わせを使う"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL); INSERT INTO users VALUES (1,'坂本龍馬'),(2,'武市半平太'),(3,'中岡慎太郎'),(4,'岡田以蔵'); INSERT INTO messages VALUES (1,1,'海へ'),(2,3,'会談');",
+  "starterSql":"SELECT u.id, u.name FROM users u\nWHERE NOT EXISTS (SELECT 1 FROM messages m WHERE -- 相関条件)\nORDER BY u.name;",
+  "solutionSql":"SELECT u.id,u.name FROM users u WHERE NOT EXISTS (SELECT 1 FROM messages m WHERE m.user_id=u.id) ORDER BY u.name;",
+  "expectedCsv":"id,name\n4,岡田以蔵\n2,武市半平太\n","tests":[{"name":"未投稿ユーザーのみ","expectedCsv":"id,name\n4,岡田以蔵\n2,武市半平太\n"}]
+}

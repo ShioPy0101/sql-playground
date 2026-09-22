@@ -277,6 +277,21 @@ func (h *TaskHandler) AdminEvent(c echo.Context) error {
 	return c.JSON(http.StatusOK, detail)
 }
 
+func (h *TaskHandler) AdminUpdateEventTasks(c echo.Context) error {
+	if !httpapi.RequireAdminBasicAuth(c.Response().Writer, c.Request()) {
+		return nil
+	}
+	var input service.UpdateEventTasksInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request body"})
+	}
+	detail, err := h.service.UpdateEventTasks(c.Param("slug"), input.TaskNumbers)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+	}
+	return c.JSON(http.StatusOK, detail)
+}
+
 const userCookieName = "sql_playground_user_id"
 
 func ensureUserID(c echo.Context) (string, error) {

@@ -141,6 +141,27 @@ func TestTask45BenchmarkConfigurationRunsAllStages(t *testing.T) {
 	}
 }
 
+func TestAdvancedTaskBenchmarkConfigurationsRun(t *testing.T) {
+	for _, number := range []int{59, 60, 61, 67, 71} {
+		task, err := LoadTaskDefinition(fmt.Sprint(number))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if task.Benchmark == nil || !task.Benchmark.Enabled {
+			t.Fatalf("task %d has no enabled benchmark", number)
+		}
+		config := *task.Benchmark
+		config.RowCounts = []int{1_000}
+		report, err := NewBenchmarkService().Run(task.Mode, config, task.SolutionSQL)
+		if err != nil {
+			t.Fatalf("task %d benchmark error: %v", number, err)
+		}
+		if report.Status != "completed" || len(report.Results) != 1 {
+			t.Fatalf("task %d benchmark report = %#v", number, report)
+		}
+	}
+}
+
 func TestTask45BenchmarkWithoutIndexesShowsFullScan(t *testing.T) {
 	task, err := LoadTaskDefinition("45")
 	if err != nil {

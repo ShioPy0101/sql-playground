@@ -1,0 +1,9 @@
+{
+  "number":70,"mode":"sql","slug":"advanced-left-join-zero-and-null","title":"[応用] LEFT JOINとNULLで投稿0件も集計する","note":"[スライド範囲外]",
+  "statement":"全藩士を対象に、削除されていない投稿数を集計します。投稿0件の人も残すためLEFT JOINを使い、deleted_at IS NULLの条件をON句に置いてください。COUNT(*)ではなく投稿idを数え、user_id順に返します。",
+  "constraints":[{"name":"全員表示","value":"LEFT JOINを使う"},{"name":"NULL","value":"deleted_at IS NULLを使い、ON句で有効投稿を絞る"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL, deleted_at TEXT); INSERT INTO users VALUES (1,'坂本龍馬'),(2,'武市半平太'),(3,'中岡慎太郎'); INSERT INTO messages VALUES (1,1,'有効',NULL),(2,1,'削除済','2026-01-01'),(3,2,'有効',NULL);",
+  "starterSql":"SELECT u.id, u.name, COUNT(m.id) AS active_messages\nFROM users u\nLEFT JOIN messages m ON m.user_id=u.id AND -- 未削除\nGROUP BY u.id,u.name ORDER BY u.id;",
+  "solutionSql":"SELECT u.id,u.name,COUNT(m.id) AS active_messages FROM users u LEFT JOIN messages m ON m.user_id=u.id AND m.deleted_at IS NULL GROUP BY u.id,u.name ORDER BY u.id;",
+  "expectedCsv":"id,name,active_messages\n1,坂本龍馬,1\n2,武市半平太,1\n3,中岡慎太郎,0\n","tests":[{"name":"0件と削除済みを区別","expectedCsv":"id,name,active_messages\n1,坂本龍馬,1\n2,武市半平太,1\n3,中岡慎太郎,0\n"}]
+}

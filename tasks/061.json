@@ -1,0 +1,9 @@
+{
+  "number":61,"mode":"ddl","slug":"advanced-covering-index","title":"[応用] Covering Indexで一覧取得を完結させる","note":"[スライド範囲外]",
+  "statement":"藩士向け通知画面は SELECT user_id, created_at FROM messages WHERE tenant_id = 42 ORDER BY created_at DESC; を繰り返します。絞り込みと並び替えに加え、返却するuser_idまで含むcovering indexを設計してください。名前は自由です。",
+  "constraints":[{"name":"列順","value":"tenant_id, created_at, user_id の順に含める"}],"csv":"",
+  "starterSql":"CREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL);",
+  "solutionSql":"CREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL);\nCREATE INDEX idx_messages_covering ON messages(tenant_id, created_at, user_id);",
+  "checkSql":"SELECT EXISTS (SELECT 1 FROM pragma_index_list('messages') il WHERE (SELECT group_concat(name, ',') FROM pragma_index_info(il.name) ORDER BY seqno) = 'tenant_id,created_at,user_id') AS ok;","expectedCsv":"ok\n1\n","tests":[{"name":"covering indexの構成","csv":"","expectedCsv":"ok\n1\n"}],
+  "benchmark":{"enabled":true,"runOnFailed":true,"timeoutMs":5000,"target":"fixed-query","query":"SELECT user_id, created_at FROM messages WHERE tenant_id = 42 ORDER BY created_at DESC;","rowCounts":[1000,10000,50000],"dataset":{"table":"messages","columns":[{"name":"id","type":"INTEGER","expression":"row_number"},{"name":"tenant_id","type":"INTEGER","expression":"(row_number % 100) + 1"},{"name":"user_id","type":"INTEGER","expression":"(row_number % 5000) + 1"},{"name":"body","type":"TEXT","expression":"printf('body-%d', row_number)"},{"name":"created_at","type":"TEXT","expression":"printf('2026-01-%02d 12:%02d:00', ((row_number-1)%28)+1, row_number%60)"}]}}
+}

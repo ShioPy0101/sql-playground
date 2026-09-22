@@ -1,0 +1,9 @@
+{
+  "number":76,"mode":"sql","slug":"advanced-left-join-on-vs-where","title":"[応用] LEFT JOINをONとWHEREの違いから守る","note":"[スライド範囲外]",
+  "statement":"全藩士と、2026年4月以降の投稿件数を表示します。期間条件をWHEREに置くと投稿0件の藩士が消え、INNER JOIN相当に崩れます。期間条件をON句へ置き、全員を残してください。",
+  "constraints":[{"name":"条件位置","value":"messages.created_atの条件をLEFT JOINのON句に置く"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE users (id INTEGER PRIMARY KEY,name TEXT NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,created_at TEXT NOT NULL); INSERT INTO users VALUES (1,'坂本龍馬'),(2,'武市半平太'),(3,'中岡慎太郎'); INSERT INTO messages VALUES (1,1,'2026-03-01'),(2,1,'2026-04-01'),(3,2,'2026-04-02');",
+  "starterSql":"SELECT u.id,u.name,COUNT(m.id) AS recent_count FROM users u LEFT JOIN messages m ON m.user_id=u.id -- 期間条件もONへ GROUP BY u.id,u.name ORDER BY u.id;",
+  "solutionSql":"SELECT u.id,u.name,COUNT(m.id) AS recent_count FROM users u LEFT JOIN messages m ON m.user_id=u.id AND m.created_at>='2026-04-01' GROUP BY u.id,u.name ORDER BY u.id;",
+  "expectedCsv":"id,name,recent_count\n1,坂本龍馬,1\n2,武市半平太,1\n3,中岡慎太郎,0\n","tests":[{"name":"対象投稿0件のuserも残す","expectedCsv":"id,name,recent_count\n1,坂本龍馬,1\n2,武市半平太,1\n3,中岡慎太郎,0\n"}]
+}

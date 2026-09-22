@@ -18,6 +18,7 @@ export function TaskDetails({ task }: TaskDetailsProps) {
         </div>
         <div className="task-copy">
           <h3>{task.title}</h3>
+          {task.note ? <p className="task-note">備考: {task.note}</p> : null}
           <p>{task.statement}</p>
         </div>
       </div>

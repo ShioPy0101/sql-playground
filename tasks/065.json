@@ -1,0 +1,8 @@
+{
+  "number":65,"mode":"ddl","slug":"advanced-tenant-unique-email","title":"[応用] UNIQUE制約をテナント単位に設計する","note":"[スライド範囲外]",
+  "statement":"同じ藩の中ではemailを重複禁止にしつつ、別の藩では同じemailを利用可能にします。usersにテナント単位の複合UNIQUE制約を設定してください。単一列emailのUNIQUEは要件を満たしません。",
+  "constraints":[{"name":"一意性","value":"UNIQUE (tenant_id, email)"}],"csv":"",
+  "starterSql":"CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, email TEXT NOT NULL, name TEXT NOT NULL);",
+  "solutionSql":"CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, email TEXT NOT NULL, name TEXT NOT NULL, UNIQUE (tenant_id, email));",
+  "checkSql":"SELECT EXISTS (SELECT 1 FROM pragma_index_list('users') il WHERE il.\"unique\"=1 AND (SELECT group_concat(name, ',') FROM pragma_index_info(il.name) ORDER BY seqno)='tenant_id,email') AS ok;","expectedCsv":"ok\n1\n","tests":[{"name":"tenant内email一意制約","csv":"","expectedCsv":"ok\n1\n"}]
+}

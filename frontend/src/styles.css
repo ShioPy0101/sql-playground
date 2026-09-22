@@ -387,6 +387,13 @@ h2 {
   line-height: 1.6;
 }
 
+.task-note {
+  margin-top: 7px;
+  color: #b06000;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1351,6 +1358,81 @@ th {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.event-task-editor {
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+}
+
+.event-task-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-task-list li {
+  display: grid;
+  grid-template-columns: 30px 54px minmax(180px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.event-task-position {
+  color: #5f6368;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.event-task-actions,
+.event-task-add,
+.event-task-save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-task-add,
+.event-task-save {
+  padding: 14px;
+}
+
+.event-task-add select {
+  min-width: 0;
+  min-height: 38px;
+  flex: 1;
+  padding: 7px 9px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.secondary-button.compact {
+  min-height: 32px;
+  padding: 4px 9px;
+}
+
+.secondary-button.danger {
+  color: #b3261e;
+}
+
+.save-success {
+  color: #137333;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .event-task-list li {
+    grid-template-columns: 30px 50px minmax(0, 1fr) auto;
+  }
+
+  .event-task-actions {
+    grid-column: 2 / -1;
+  }
 }
 
 .admin-summary div {

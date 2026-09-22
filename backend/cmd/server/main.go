@@ -49,6 +49,7 @@ func main() {
 	adminAPI.GET("/events", taskHandlerInstance.AdminEvents)
 	adminAPI.POST("/events", taskHandlerInstance.AdminCreateEvent)
 	adminAPI.GET("/events/:slug", taskHandlerInstance.AdminEvent)
+	adminAPI.PUT("/events/:slug/tasks", taskHandlerInstance.AdminUpdateEventTasks)
 	eventAPI.GET("/:slug", taskHandlerInstance.EventPage)
 	eventAPI.POST("/:slug/join", taskHandlerInstance.JoinEvent)
 	eventAPI.GET("/:slug/tasks/:number", taskHandlerInstance.GetEventTask)

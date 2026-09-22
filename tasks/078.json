@@ -1,0 +1,24 @@
+{
+  "number": 78,
+  "mode": "ddl",
+  "slug": "advanced-multitenant-report",
+  "title": "[応用] マルチテナント分析を安全に統合する総合問題",
+  "note": "[スライド範囲外]",
+  "statement": "藩ごとの利用状況を安全かつ高速に参照できる仕組みを設計します。organizations、memberships、messagesをtenant_idで結び、所属人数、未削除message数、投稿経験のある所属者数を返す tenant_activity_report Viewを作成してください。所属0人の藩も残し、投稿経験者はEXISTSで判定します。さらに、その相関検索を支える messages(tenant_id, user_id) のpartial indexを deleted_at IS NULL の行だけに作成してください。インデックス名は自由です。",
+  "constraints": [
+    {"name":"テナント境界","value":"すべての関連判定にtenant_idを含めます"},
+    {"name":"集計View","value":"LEFT JOIN、COUNT(DISTINCT)、EXISTSを使い、0件の藩も残します"},
+    {"name":"インデックス","value":"messages(tenant_id, user_id) WHERE deleted_at IS NULLを作成します"}
+  ],
+  "csv": "",
+  "inputType": "sql",
+  "input": "CREATE TABLE organizations (tenant_id INTEGER PRIMARY KEY,name TEXT NOT NULL); CREATE TABLE memberships (tenant_id INTEGER NOT NULL,user_id INTEGER NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY,tenant_id INTEGER NOT NULL,user_id INTEGER NOT NULL,deleted_at TEXT); INSERT INTO organizations VALUES (1,'土佐藩'),(2,'薩摩藩'),(3,'長州藩'); INSERT INTO memberships VALUES (1,10),(1,11),(2,10),(2,12); INSERT INTO messages VALUES (1,1,10,NULL),(2,1,10,NULL),(3,1,99,NULL),(4,2,10,NULL),(5,2,12,'2026-01-01');",
+  "starterSql": "CREATE INDEX -- messagesの未削除行に対する複合partial index\n\nCREATE VIEW tenant_activity_report AS\nSELECT o.tenant_id, o.name,\n       COUNT(DISTINCT mem.user_id) AS member_count,\n       COUNT(DISTINCT m.id) AS active_messages,\n       COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM messages em WHERE -- 同一tenant・userの未削除投稿) THEN mem.user_id END) AS active_members\nFROM organizations o\nLEFT JOIN memberships mem ON -- tenant条件\nLEFT JOIN messages m ON -- tenant条件と未削除条件\nGROUP BY o.tenant_id, o.name;",
+  "solutionSql": "CREATE INDEX idx_messages_active_tenant_user ON messages(tenant_id, user_id) WHERE deleted_at IS NULL; CREATE VIEW tenant_activity_report AS SELECT o.tenant_id,o.name,COUNT(DISTINCT mem.user_id) AS member_count,COUNT(DISTINCT m.id) AS active_messages,COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM messages em WHERE em.tenant_id=o.tenant_id AND em.user_id=mem.user_id AND em.deleted_at IS NULL) THEN mem.user_id END) AS active_members FROM organizations o LEFT JOIN memberships mem ON mem.tenant_id=o.tenant_id LEFT JOIN messages m ON m.tenant_id=o.tenant_id AND m.deleted_at IS NULL GROUP BY o.tenant_id,o.name;",
+  "checkSql": "SELECT 'index' AS check_type,'' AS tenant_id,'' AS name,'' AS member_count,'' AS active_messages,CAST(EXISTS (SELECT 1 FROM sqlite_master sm JOIN pragma_index_list('messages') il ON il.name=sm.name WHERE lower(replace(sm.sql,' ','')) LIKE '%wheredeleted_atisnull%' AND (SELECT group_concat(name, ',') FROM pragma_index_info(il.name) ORDER BY seqno)='tenant_id,user_id') AS TEXT) AS active_members UNION ALL SELECT 'report',tenant_id,name,member_count,active_messages,active_members FROM tenant_activity_report ORDER BY check_type,tenant_id;",
+  "expectedCsv": "check_type,tenant_id,name,member_count,active_messages,active_members\nindex,,,,,1\nreport,1,土佐藩,2,3,1\nreport,2,薩摩藩,2,1,1\nreport,3,長州藩,0,0,0\n",
+  "tests": [
+    {"name":"藩別レポートと索引","expectedCsv":"check_type,tenant_id,name,member_count,active_messages,active_members\nindex,,,,,1\nreport,1,土佐藩,2,3,1\nreport,2,薩摩藩,2,1,1\nreport,3,長州藩,0,0,0\n"},
+    {"name":"0件と所属外投稿を扱う別データ","inputType":"sql","input":"CREATE TABLE organizations (tenant_id INTEGER PRIMARY KEY,name TEXT NOT NULL); CREATE TABLE memberships (tenant_id INTEGER NOT NULL,user_id INTEGER NOT NULL); CREATE TABLE messages (id INTEGER PRIMARY KEY,tenant_id INTEGER NOT NULL,user_id INTEGER NOT NULL,deleted_at TEXT); INSERT INTO organizations VALUES (1,'土佐藩'),(2,'薩摩藩'); INSERT INTO memberships VALUES (1,1),(1,2); INSERT INTO messages VALUES (1,1,2,NULL),(2,1,1,'2026-01-01'),(3,1,9,NULL);","expectedCsv":"check_type,tenant_id,name,member_count,active_messages,active_members\nindex,,,,,1\nreport,1,土佐藩,2,2,1\nreport,2,薩摩藩,0,0,0\n"}
+  ]
+}

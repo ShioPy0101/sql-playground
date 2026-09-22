@@ -51,6 +51,28 @@ func TestTaskServiceSubmitComparesAllCases(t *testing.T) {
 	}
 }
 
+func TestAdvancedTaskSolutionsAndLabels(t *testing.T) {
+	service := newTestTaskService(t)
+	for number := 59; number <= 78; number++ {
+		t.Run(fmt.Sprintf("task_%d", number), func(t *testing.T) {
+			task, err := service.LoadTask(fmt.Sprint(number))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasPrefix(task.Title, "[応用]") {
+				t.Fatalf("title = %q", task.Title)
+			}
+			if task.Note != "[スライド範囲外]" {
+				t.Fatalf("note = %q", task.Note)
+			}
+			result := service.checkTask(task, task.SolutionSQL)
+			if !result.Passed {
+				t.Fatalf("solution failed: %#v", result.Cases)
+			}
+		})
+	}
+}
+
 func TestTaskServiceSubmitNeverRunsConfiguredBenchmark(t *testing.T) {
 	taskDir := t.TempDir()
 	writeTaskFile(t, taskDir, "906.json", `{

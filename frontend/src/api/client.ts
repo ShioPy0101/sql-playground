@@ -36,6 +36,7 @@ export type Task = {
   benchmark?: BenchmarkConfig;
   slug: string;
   title: string;
+  note?: string;
   statement: string;
   constraints: Constraint[];
   csv: string;
@@ -98,8 +99,10 @@ export type BenchmarkReport = {
 
 export type TaskSummary = {
   number: number;
+  mode?: "sql" | "ddl";
   slug: string;
   title: string;
+  note?: string;
   statement: string;
   testCount: number;
   answered: boolean;
@@ -176,6 +179,7 @@ export type EventSubmission = TaskSubmission & { username: string };
 
 export type AdminEventDetail = Event & {
   taskNumbers: number[];
+  tasks: TaskSummary[];
   participants: EventParticipant[];
   submissions: EventSubmission[];
   participantCount: number;
@@ -275,6 +279,10 @@ export async function fetchAdminEvent(slug: string) {
   return getJSON<AdminEventDetail>(`/api/admin/events/${encodeURIComponent(slug)}`);
 }
 
+export async function updateAdminEventTasks(slug: string, taskNumbers: number[]) {
+  return putJSON<AdminEventDetail>(`/api/admin/events/${encodeURIComponent(slug)}/tasks`, { taskNumbers });
+}
+
 export async function fetchAdminSubmissions() {
   return getJSON<AdminSubmissionsResponse>("/api/admin/submissions");
 }
@@ -307,5 +315,18 @@ async function postJSON<T>(url: string, body: unknown) {
     throw new Error(payload.message ?? "SQL の実行に失敗しました");
   }
 
+  return payload as T;
+}
+
+async function putJSON<T>(url: string, body: unknown) {
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.message ?? "更新に失敗しました");
+  }
   return payload as T;
 }

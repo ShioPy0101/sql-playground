@@ -1,0 +1,8 @@
+{
+  "number":64,"mode":"ddl","slug":"advanced-composite-foreign-key","title":"[応用] 複合外部キーでテナント境界を守る","note":"[スライド範囲外]",
+  "statement":"messagesが別藩のchannelを参照できないようにします。channelsは (tenant_id, id) を複合主キーにし、messagesの (tenant_id, channel_id) から同じ組へ複合外部キーを設定してください。",
+  "constraints":[{"name":"参照","value":"FOREIGN KEY (tenant_id, channel_id) REFERENCES channels(tenant_id, id)"}],"csv":"",
+  "starterSql":"CREATE TABLE channels (tenant_id INTEGER NOT NULL, id INTEGER NOT NULL, name TEXT NOT NULL, PRIMARY KEY (tenant_id, id));\nCREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, body TEXT NOT NULL);",
+  "solutionSql":"CREATE TABLE channels (tenant_id INTEGER NOT NULL, id INTEGER NOT NULL, name TEXT NOT NULL, PRIMARY KEY (tenant_id, id)); CREATE TABLE messages (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, body TEXT NOT NULL, FOREIGN KEY (tenant_id, channel_id) REFERENCES channels(tenant_id, id));",
+  "checkSql":"SELECT CASE WHEN (SELECT COUNT(*) FROM pragma_foreign_key_list('messages') WHERE \"table\"='channels')=2 AND (SELECT COUNT(*) FROM pragma_foreign_key_list('messages') WHERE seq=0 AND \"from\"='tenant_id' AND \"to\"='tenant_id')=1 AND (SELECT COUNT(*) FROM pragma_foreign_key_list('messages') WHERE seq=1 AND \"from\"='channel_id' AND \"to\"='id')=1 THEN 1 ELSE 0 END AS ok;","expectedCsv":"ok\n1\n","tests":[{"name":"複合外部キー","csv":"","expectedCsv":"ok\n1\n"}]
+}

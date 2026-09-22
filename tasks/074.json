@@ -1,0 +1,9 @@
+{
+  "number":74,"mode":"sql","slug":"advanced-latest-record-with-max","title":"[応用] MAXとサブクエリで最新レコードを取得する","note":"[スライド範囲外]",
+  "statement":"各tenantの最新日時に投稿されたメッセージを取得します。GROUP BYでtenantごとのMAX(created_at)を求めるサブクエリを作り、元のmessagesへtenant_idとcreated_atの両方でJOINしてください。同時刻の投稿はすべて返します。",
+  "constraints":[{"name":"最新日時","value":"tenant_idごとのMAX(created_at)を元表へJOINする"}],"csv":"","inputType":"sql",
+  "input":"CREATE TABLE messages (id INTEGER PRIMARY KEY,tenant_id INTEGER NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL); INSERT INTO messages VALUES (1,1,'古い','2026-01-01'),(2,1,'最新A','2026-01-03'),(3,1,'最新B','2026-01-03'),(4,2,'古い','2026-02-01'),(5,2,'最新','2026-02-02');",
+  "starterSql":"SELECT m.tenant_id,m.id,m.body,m.created_at FROM messages m JOIN (SELECT tenant_id, MAX(created_at) AS latest_at FROM messages GROUP BY tenant_id) latest ON -- 2条件 ORDER BY m.tenant_id,m.id;",
+  "solutionSql":"SELECT m.tenant_id,m.id,m.body,m.created_at FROM messages m JOIN (SELECT tenant_id,MAX(created_at) latest_at FROM messages GROUP BY tenant_id) latest ON latest.tenant_id=m.tenant_id AND latest.latest_at=m.created_at ORDER BY m.tenant_id,m.id;",
+  "expectedCsv":"tenant_id,id,body,created_at\n1,2,最新A,2026-01-03\n1,3,最新B,2026-01-03\n2,5,最新,2026-02-02\n","tests":[{"name":"同時刻の最新行も保持","expectedCsv":"tenant_id,id,body,created_at\n1,2,最新A,2026-01-03\n1,3,最新B,2026-01-03\n2,5,最新,2026-02-02\n"}]
+}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -63,6 +64,102 @@ func TestEventSubmissionsAreIsolatedFromNormalAndOtherEvents(t *testing.T) {
 	}
 	if detail.Submissions[0].BenchmarkReport == nil || detail.Submissions[0].BenchmarkReport.Results[0].VMSteps != 7 {
 		t.Fatalf("event B benchmark = %#v", detail.Submissions[0].BenchmarkReport)
+	}
+}
+
+func TestUpdateEventTasksAddsRemovesReordersAndPreservesSubmissions(t *testing.T) {
+	service := newTestTaskService(t)
+	event, err := service.CreateEvent(CreateEventInput{Slug: "editable", Title: "Editable", StartsAt: time.Now().Add(-time.Hour), TaskNumbers: []int{1, 2}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.JoinEvent(event.Slug, "user", "User"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.SubmitEventTask(event.Slug, "1", "SELECT 1;", "user"); err != nil {
+		t.Fatal(err)
+	}
+
+	detail, err := service.UpdateEventTasks(event.Slug, []int{3, 2})
+	if err != nil {
+		t.Fatalf("UpdateEventTasks returned error: %v", err)
+	}
+	if !reflect.DeepEqual(detail.TaskNumbers, []int{3, 2}) {
+		t.Fatalf("task numbers = %v", detail.TaskNumbers)
+	}
+	if len(detail.Submissions) != 1 || detail.Submissions[0].TaskNumber != 1 {
+		t.Fatalf("submissions were changed: %#v", detail.Submissions)
+	}
+	page, err := service.EventPage(event.Slug, "user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := []int{page.Tasks[0].Number, page.Tasks[1].Number}; !reflect.DeepEqual(got, []int{3, 2}) {
+		t.Fatalf("participant order = %v", got)
+	}
+
+	rows, err := service.submissions.db.Query(`SELECT position FROM event_tasks WHERE event_id = ? ORDER BY position`, event.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	positions := []int{}
+	for rows.Next() {
+		var position int
+		if err := rows.Scan(&position); err != nil {
+			t.Fatal(err)
+		}
+		positions = append(positions, position)
+	}
+	if !reflect.DeepEqual(positions, []int{1, 2}) {
+		t.Fatalf("positions = %v", positions)
+	}
+}
+
+func TestUpdateEventTasksRejectsDuplicateUnknownTaskAndUnknownEvent(t *testing.T) {
+	service := newTestTaskService(t)
+	event, err := service.CreateEvent(CreateEventInput{Slug: "validation", Title: "Validation", StartsAt: time.Now(), TaskNumbers: []int{1, 2}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, testCase := range map[string]struct {
+		slug    string
+		numbers []int
+	}{
+		"duplicate":     {event.Slug, []int{1, 1}},
+		"unknown task":  {event.Slug, []int{1, 999999}},
+		"unknown event": {"missing", []int{1}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := service.UpdateEventTasks(testCase.slug, testCase.numbers); err == nil {
+				t.Fatal("expected error")
+			}
+		})
+	}
+	detail, err := service.AdminEvent(event.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(detail.TaskNumbers, []int{1, 2}) {
+		t.Fatalf("tasks changed after validation error: %v", detail.TaskNumbers)
+	}
+}
+
+func TestUpdateEventTasksRollsBackOnInsertFailure(t *testing.T) {
+	service := newTestTaskService(t)
+	event, err := service.CreateEvent(CreateEventInput{Slug: "rollback", Title: "Rollback", StartsAt: time.Now(), TaskNumbers: []int{1, 2}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.submissions.UpdateEventTasks(event.ID, []int{3, 3}); err == nil {
+		t.Fatal("expected duplicate insert error")
+	}
+	numbers, err := service.submissions.EventTaskNumbers(event.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(numbers, []int{1, 2}) {
+		t.Fatalf("rollback failed, tasks = %v", numbers)
 	}
 }
 

@@ -434,6 +434,47 @@ h2 {
   white-space: nowrap;
 }
 
+.panel-heading-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.input-format-toggle {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+}
+
+.input-format-toggle button {
+  min-width: 48px;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-right: 1px solid #dadce0;
+  border-radius: 0;
+  background: #ffffff;
+  color: #5f6368;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.input-format-toggle button:last-child {
+  border-right: 0;
+}
+
+.input-format-toggle button.is-active {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+.input-format-toggle button:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: -2px;
+}
+
 textarea {
   width: 100%;
   flex: 1;

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 type EditorPanelProps = {
   title: string;
   label: string;
@@ -5,6 +7,7 @@ type EditorPanelProps = {
   ariaLabel: string;
   className?: string;
   readOnly?: boolean;
+  headingAccessory?: ReactNode;
   onChange?: (value: string) => void;
 };
 
@@ -15,13 +18,17 @@ export function EditorPanel({
   ariaLabel,
   className = "",
   readOnly = false,
+  headingAccessory,
   onChange
 }: EditorPanelProps) {
   return (
     <section className={`editor-panel ${className}`.trim()} aria-label={ariaLabel}>
       <div className="panel-heading">
         <h2>{title}</h2>
-        <span>{label}</span>
+        <div className="panel-heading-meta">
+          <span>{label}</span>
+          {headingAccessory}
+        </div>
       </div>
       <textarea
         value={value}

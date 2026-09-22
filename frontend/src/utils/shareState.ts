@@ -1,5 +1,9 @@
+import type { InputFormat } from "../api/client";
+
 export type PlaygroundShareState = {
   csv: string;
+  inputSql?: string;
+  input?: InputFormat;
   sql: string;
   dialect: string;
 };
@@ -44,6 +48,8 @@ function isPlaygroundShareState(value: unknown): value is PlaygroundShareState {
   const state = value as Record<string, unknown>;
   return (
     typeof state.csv === "string" &&
+    (state.inputSql === undefined || typeof state.inputSql === "string") &&
+    (state.input === undefined || state.input === "csv" || state.input === "sql") &&
     typeof state.sql === "string" &&
     typeof state.dialect === "string" &&
     state.dialect.length > 0

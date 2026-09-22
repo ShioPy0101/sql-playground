@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { executeSQL } from "../api/client";
+import type { InputFormat } from "../api/client";
 import { EditorPanel } from "../components/EditorPanel";
 import { ResultPanel } from "../components/ResultPanel";
 import { formatTableLabel } from "../utils/csv";
@@ -11,6 +12,28 @@ Bob,blue,91
 Chika,red,88
 Daichi,blue,76`;
 
+const sampleInputSQL = `CREATE TABLE users (
+  id INTEGER PRIMARY KEY,
+  tenant_id INTEGER NOT NULL,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE posts (
+  id INTEGER PRIMARY KEY,
+  tenant_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+INSERT INTO users (id, tenant_id, name) VALUES
+  (1, 1, '吉田東洋'),
+  (2, 1, '坂本龍馬'),
+  (6, 2, '西郷隆盛');
+
+INSERT INTO posts (id, tenant_id, user_id, title) VALUES
+  (1, 1, 2, '藩政について');`;
+
 const sampleQuery = `SELECT
   team,
   COUNT(*) AS members,
@@ -21,38 +44,61 @@ ORDER BY average_score DESC;`;
 
 const defaultDialect = "sqlite";
 
+function inputFormatFromURL() {
+  const input = new URLSearchParams(window.location.search).get("input");
+  return input === "csv" || input === "sql" ? input : null;
+}
+
 export function PlaygroundPage() {
   const [csv, setCSV] = useState(sampleCSV);
+  const [inputSQL, setInputSQL] = useState(sampleInputSQL);
+  const [inputFormat, setInputFormat] = useState<InputFormat>(inputFormatFromURL() ?? "csv");
   const [query, setQuery] = useState(sampleQuery);
   const [dialect, setDialect] = useState(defaultDialect);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [isShareStateReady, setIsShareStateReady] = useState(false);
-  const tableLabel = useMemo(() => formatTableLabel(csv), [csv]);
+  const tableLabel = useMemo(
+    () => (inputFormat === "csv" ? formatTableLabel(csv) : "SQLite DDL + INSERT"),
+    [csv, inputFormat]
+  );
 
   useEffect(() => {
     let cancelled = false;
-    const encoded = new URLSearchParams(window.location.hash.slice(1)).get("state");
+    let restoreVersion = 0;
 
     async function restoreShareState() {
+      const version = ++restoreVersion;
+      setIsShareStateReady(false);
+      const encoded = new URLSearchParams(window.location.hash.slice(1)).get("state");
+      const urlInput = inputFormatFromURL();
+
       if (encoded) {
         const state = await decodePlaygroundState(encoded);
-        if (!cancelled && state) {
+        if (!cancelled && version === restoreVersion && state) {
           setCSV(state.csv);
+          setInputSQL(state.inputSql ?? sampleInputSQL);
+          setInputFormat(urlInput ?? state.input ?? "csv");
           setQuery(state.sql);
           setDialect(state.dialect);
         }
+      } else if (!cancelled && version === restoreVersion) {
+        setInputFormat(urlInput ?? "csv");
       }
 
-      if (!cancelled) {
+      if (!cancelled && version === restoreVersion) {
         setIsShareStateReady(true);
       }
     }
 
     void restoreShareState();
+    window.addEventListener("popstate", restoreShareState);
+    window.addEventListener("hashchange", restoreShareState);
     return () => {
       cancelled = true;
+      window.removeEventListener("popstate", restoreShareState);
+      window.removeEventListener("hashchange", restoreShareState);
     };
   }, []);
 
@@ -64,17 +110,25 @@ export function PlaygroundPage() {
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        const encoded = await encodePlaygroundState({ csv, sql: query, dialect });
+        const encoded = await encodePlaygroundState({
+          csv,
+          inputSql: inputSQL,
+          input: inputFormat,
+          sql: query,
+          dialect
+        });
         if (cancelled) {
           return;
         }
 
         const hash = new URLSearchParams(window.location.hash.slice(1));
         hash.set("state", encoded);
+        const search = new URLSearchParams(window.location.search);
+        search.set("input", inputFormat);
         window.history.replaceState(
           null,
           "",
-          `${window.location.pathname}${window.location.search}#${hash.toString()}`
+          `${window.location.pathname}?${search.toString()}#${hash.toString()}`
         );
       } catch (encodeError) {
         console.error("Failed to encode playground share state", encodeError);
@@ -85,7 +139,22 @@ export function PlaygroundPage() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [csv, dialect, isShareStateReady, query]);
+  }, [csv, dialect, inputFormat, inputSQL, isShareStateReady, query]);
+
+  function handleInputFormatChange(nextFormat: InputFormat) {
+    if (nextFormat === inputFormat) {
+      return;
+    }
+
+    const search = new URLSearchParams(window.location.search);
+    search.set("input", nextFormat);
+    window.history.pushState(
+      null,
+      "",
+      `${window.location.pathname}?${search.toString()}${window.location.hash}`
+    );
+    setInputFormat(nextFormat);
+  }
 
   async function handleExecute(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,7 +162,8 @@ export function PlaygroundPage() {
     setError("");
 
     try {
-      const payload = await executeSQL(csv, query);
+      const input = inputFormat === "csv" ? csv : inputSQL;
+      const payload = await executeSQL(input, query, "", inputFormat);
       setResult(payload.csv);
     } catch (err) {
       setError(err instanceof Error ? err.message : "予期しないエラーが発生しました");
@@ -117,11 +187,26 @@ export function PlaygroundPage() {
 
       <form id="sql-form" className="workspace" onSubmit={handleExecute}>
         <EditorPanel
-          title="CSV"
+          title="入力データ"
           label={tableLabel}
-          value={csv}
-          ariaLabel="CSV入力"
-          onChange={setCSV}
+          value={inputFormat === "csv" ? csv : inputSQL}
+          ariaLabel={inputFormat === "csv" ? "CSV入力" : "SQL入力"}
+          onChange={inputFormat === "csv" ? setCSV : setInputSQL}
+          headingAccessory={
+            <div className="input-format-toggle" aria-label="入力形式">
+              {(["csv", "sql"] as const).map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  className={inputFormat === format ? "is-active" : ""}
+                  aria-pressed={inputFormat === format}
+                  onClick={() => handleInputFormatChange(format)}
+                >
+                  {format.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          }
         />
         <EditorPanel
           title="SQL"
@@ -130,7 +215,7 @@ export function PlaygroundPage() {
           ariaLabel="SQLクエリ"
           onChange={setQuery}
         />
-        <ResultPanel result={result} error={error} emptyText="CSV と SQL を編集して実行してください。" />
+        <ResultPanel result={result} error={error} emptyText="入力データと SQL を編集して実行してください。" />
       </form>
     </main>
   );

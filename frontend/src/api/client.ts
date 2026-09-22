@@ -2,6 +2,8 @@ export type ExecuteResponse = {
   csv: string;
 };
 
+export type InputFormat = "csv" | "sql";
+
 export type Constraint = {
   name: string;
   value: string;
@@ -130,8 +132,13 @@ export type AdminSolutionChecksResponse = {
   checks: TaskSolutionCheck[];
 };
 
-export async function executeSQL(csv: string, query: string, checkSql = "") {
-  return postJSON<ExecuteResponse>("/api/sqlite/execute", { csv, query, checkSql });
+export async function executeSQL(
+  input: string,
+  query: string,
+  checkSql = "",
+  inputType: InputFormat = "csv"
+) {
+  return postJSON<ExecuteResponse>("/api/sqlite/execute", { input, inputType, query, checkSql });
 }
 
 export async function fetchCurrentUser() {

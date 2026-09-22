@@ -78,12 +78,19 @@ func TestTaskServiceSubmitNeverRunsConfiguredBenchmark(t *testing.T) {
 	t.Setenv("SQLITE_BENCHMARK_MAX_ROWS", "1")
 	service := newTestTaskService(t)
 
-	result, err := service.Submit("906", "SELECT id FROM input;")
+	result, err := service.SubmitForUser("906", "SELECT id FROM input;", "benchmark_admin")
 	if err != nil {
 		t.Fatalf("Submit returned error: %v", err)
 	}
 	if !result.Passed {
 		t.Fatalf("Submit() passed = false, want true: %#v", result)
+	}
+	submissions, err := service.Submissions()
+	if err != nil {
+		t.Fatalf("Submissions returned error: %v", err)
+	}
+	if len(submissions) != 1 || !submissions[0].BenchmarkEnabled {
+		t.Fatalf("submissions = %#v, want benchmark-enabled submission", submissions)
 	}
 }
 

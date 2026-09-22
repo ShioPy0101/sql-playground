@@ -211,7 +211,9 @@ func (s *TaskService) AdminEvent(slug string) (AdminEventDetail, error) {
 		return AdminEventDetail{}, err
 	}
 	submitters := map[string]bool{}
-	for _, submission := range submissions {
+	for index := range submissions {
+		submissions[index].BenchmarkEnabled = s.taskBenchmarkEnabled(submissions[index].TaskNumber)
+		submission := submissions[index]
 		submitters[submission.UserID] = true
 	}
 	return AdminEventDetail{

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AdminEventDetail, EventSubmission, fetchAdminEvent } from "../api/client";
+import { AdminEventDetail, benchmarkTask, EventSubmission, fetchAdminEvent } from "../api/client";
+import type { BenchmarkReport } from "../api/client";
+import { BenchmarkPanel } from "../components/BenchmarkPanel";
 import { eventRefreshIntervalMs } from "../config";
 
 function formatDate(value: string) {
@@ -11,6 +13,9 @@ export function AdminEventPage({ slug }: { slug: string }) {
   const [selectedID, setSelectedID] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null);
+  const [benchmarkError, setBenchmarkError] = useState("");
+  const [isBenchmarking, setIsBenchmarking] = useState(false);
   const selected = useMemo(() => detail?.submissions.find((item) => item.id === selectedID) ?? detail?.submissions[0], [detail, selectedID]);
 
   const load = useCallback(async (background = false) => {
@@ -34,6 +39,26 @@ export function AdminEventPage({ slug }: { slug: string }) {
     return () => window.clearInterval(intervalID);
   }, [load]);
 
+  useEffect(() => {
+    setBenchmarkReport(null);
+    setBenchmarkError("");
+    setIsBenchmarking(false);
+  }, [selectedID]);
+
+  async function handleBenchmark() {
+    if (!selected?.benchmarkEnabled) return;
+    setIsBenchmarking(true);
+    setBenchmarkReport(null);
+    setBenchmarkError("");
+    try {
+      setBenchmarkReport(await benchmarkTask(String(selected.taskNumber), selected.query));
+    } catch (err) {
+      setBenchmarkError(err instanceof Error ? err.message : "性能計測に失敗しました");
+    } finally {
+      setIsBenchmarking(false);
+    }
+  }
+
   async function copyURL() {
     await navigator.clipboard.writeText(`${window.location.origin}/events/${slug}`);
   }
@@ -52,7 +77,21 @@ export function AdminEventPage({ slug }: { slug: string }) {
       </section>
       <div className="admin-workspace">
         <section className="admin-table-panel"><div className="panel-heading"><h2>提出順</h2><span>古い順</span></div><div className="table-wrap"><table><thead><tr><th>#</th><th>日時</th><th>参加者</th><th>問題</th><th>結果</th></tr></thead><tbody>{detail.submissions.map((submission: EventSubmission, index) => <tr className={submission.id === selected?.id ? "selected-row" : ""} key={submission.id} onClick={() => setSelectedID(submission.id)}><td>{index + 1}</td><td>{formatDate(submission.submittedAt)}</td><td>{submission.username || submission.userId}</td><td>#{submission.taskNumber} {submission.taskTitle}</td><td><span className={submission.passed ? "badge accepted" : "badge failed"}>{submission.passed ? "正解" : "不正解"}</span></td></tr>)}</tbody></table></div></section>
-        {selected ? <aside className="admin-detail"><div className="panel-heading"><h2>提出詳細</h2><span>{selected.username}</span></div><pre className="sql-preview">{selected.query}</pre>{selected.cases.map((testCase) => <div className="case-heading" key={testCase.name}><h3>{testCase.name}</h3><span className={testCase.passed ? "badge accepted" : "badge failed"}>{testCase.passed ? "正解" : "不正解"}</span></div>)}</aside> : null}
+        {selected ? (
+          <aside className="admin-detail">
+            <div className="panel-heading"><h2>提出詳細</h2><span>{selected.username}</span></div>
+            {selected.benchmarkEnabled ? (
+              <div className="admin-detail-actions">
+                <button className="secondary-button" disabled={isBenchmarking} onClick={() => void handleBenchmark()}>
+                  {isBenchmarking ? "計測中..." : "速度を計測"}
+                </button>
+              </div>
+            ) : null}
+            <pre className="sql-preview">{selected.query}</pre>
+            {selected.cases.map((testCase) => <div className="case-heading" key={testCase.name}><h3>{testCase.name}</h3><span className={testCase.passed ? "badge accepted" : "badge failed"}>{testCase.passed ? "正解" : "不正解"}</span></div>)}
+            <BenchmarkPanel report={benchmarkReport} error={benchmarkError} running={isBenchmarking} />
+          </aside>
+        ) : null}
       </div>
     </main>
   );

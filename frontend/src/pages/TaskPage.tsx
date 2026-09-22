@@ -55,7 +55,6 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
   const [historyError, setHistoryError] = useState("");
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [showSolution, setShowSolution] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBenchmarking, setIsBenchmarking] = useState(false);
 
@@ -163,26 +162,9 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
     };
   }, []);
 
-  async function handleRun(event: FormEvent<HTMLFormElement>) {
+  function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!task) {
-      return;
-    }
-
-    setIsRunning(true);
-    setError("");
-
-    try {
-      const payload = await executeSQL(task.input ?? task.csv, query, task.checkSql, task.inputType ?? "csv");
-      setResult(payload.csv);
-      setMetrics(payload.metrics ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "SQL の実行に失敗しました");
-      setResult("");
-      setMetrics(null);
-    } finally {
-      setIsRunning(false);
-    }
+    void handleSubmit();
   }
 
   async function handleSubmit() {
@@ -308,13 +290,10 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
           <button type="button" className="secondary-button" onClick={() => setShowSolution((current) => !current)}>
             {showSolution ? "答えを隠す" : "答えを見る"}
           </button>
-          <button type="button" className="secondary-button" onClick={handleResetQuery} disabled={isRunning || isSubmitting}>
+          <button type="button" className="secondary-button" onClick={handleResetQuery} disabled={isSubmitting}>
             入力を最初に戻す
           </button>
-          <button form="task-form" className="secondary-button" disabled={isRunning || isSubmitting}>
-            {isRunning ? "実行中..." : "実行"}
-          </button>
-          <button className="run-button" disabled={isRunning || isSubmitting} onClick={handleSubmit}>
+          <button form="task-form" className="run-button" disabled={isSubmitting}>
             {isSubmitting ? "採点中..." : "提出"}
           </button>
         </div>
@@ -322,7 +301,7 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
 
       <TaskDetails task={task} />
 
-      <form id="task-form" className="task-workspace" onSubmit={handleRun}>
+      <form id="task-form" className="task-workspace" onSubmit={handleFormSubmit}>
         <EditorPanel
           title="解答SQL"
           label="編集できます"

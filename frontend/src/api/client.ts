@@ -139,6 +139,7 @@ export type TaskSubmission = {
   passed: boolean;
   cases: TaskCaseResult[];
   submittedAt: string;
+  benchmarkEnabled: boolean;
 };
 
 export type Event = {

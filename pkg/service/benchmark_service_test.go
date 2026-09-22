@@ -175,7 +175,8 @@ func TestTask45BenchmarkWithoutIndexesShowsFullScan(t *testing.T) {
 
 func TestSaaSCurriculumBenchmarksRunAllStages(t *testing.T) {
 	reports := make(map[int]BenchmarkReport)
-	for number := 48; number <= 57; number++ {
+	benchmarkTaskNumbers := []int{48, 49, 50, 51, 52, 53, 54, 55, 56, 58}
+	for _, number := range benchmarkTaskNumbers {
 		task, err := LoadTaskDefinition(fmt.Sprintf("%d", number))
 		if err != nil {
 			t.Fatalf("LoadTaskDefinition(%d) returned error: %v", number, err)
@@ -201,9 +202,9 @@ func TestSaaSCurriculumBenchmarksRunAllStages(t *testing.T) {
 	if !strings.Contains(strings.Join(withIndex.QueryPlan, "\n"), "USING INDEX idx_posts_tenant_id") {
 		t.Fatalf("task 56 plan = %#v, want tenant index", withIndex.QueryPlan)
 	}
-	composite := reports[57].Results[3]
+	composite := reports[58].Results[3]
 	if composite.SortCount != 0 || !strings.Contains(strings.Join(composite.QueryPlan, "\n"), "idx_posts_tenant_created_at") {
-		t.Fatalf("task 57 metrics = %#v, want composite index without sort", composite)
+		t.Fatalf("task 58 metrics = %#v, want composite index without sort", composite)
 	}
 }
 

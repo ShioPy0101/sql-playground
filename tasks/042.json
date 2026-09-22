@@ -2,7 +2,7 @@
   "number": 42,
   "slug": "table-design-create-customers",
   "title": "[テーブル設計][確認しよう] customers テーブルを作成する",
-  "statement": "顧客を保存する customers テーブルを CREATE TABLE で作成してください。\n\n必要な列は id, name, email, created_at です。id は INTEGER PRIMARY KEY、name と created_at は必須なので NOT NULL を付けます。email は未登録の顧客もいるため NULL を許可します。\n\nCREATE TABLE は、データを入れる前に「どんな列を持つ表なのか」を決める命令です。列名、データ型、必須かどうか、主キーをまとめて定義します。",
+  "statement": "顧客を保存する customers テーブルを作成してください。列は id, name, email, created_at。id を INTEGER PRIMARY KEY、name と created_at を NOT NULL とし、email は NULL を許可します。",
   "constraints": [
     {
       "name": "主キー",

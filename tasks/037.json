@@ -1,8 +1,48 @@
 {
   "number": 37,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL); CREATE TABLE order_items (id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL, product_id INTEGER NOT NULL); CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL); CREATE INDEX idx_orders_customer_id ON orders(customer_id); CREATE INDEX idx_order_items_order_id ON order_items(order_id);",
+    "datasets": [
+      {
+        "table": "customers",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('customer-%06d', row_number)" }
+        ]
+      },
+      {
+        "table": "orders",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "customer_id", "type": "INTEGER", "expression": "((row_number - 1) % 10000) + 1" }
+        ]
+      },
+      {
+        "table": "products",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('product-%06d', row_number)" },
+          { "name": "category", "type": "TEXT", "expression": "CASE WHEN row_number % 3 = 0 THEN 'food' ELSE 'stationery' END" }
+        ]
+      },
+      {
+        "table": "order_items",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "order_id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "product_id", "type": "INTEGER", "expression": "((row_number - 1) % 1000) + 1" }
+        ]
+      }
+    ]
+  },
   "slug": "performance-tuning-exists-for-membership",
   "title": "[パフォーマンスチューニング][確認しよう] 存在確認にはEXISTSを使う",
-  "statement": "customers, orders, order_items, products から、food カテゴリの商品を購入したことがある顧客を表示してください。出力する列は customer_name です。重複は出さず、customer_name の昇順で並べます。\n\n「条件に合う関連データが1件でもあるか」を知りたいだけなら、JOINで明細行を全部広げるより EXISTS が向いていることがあります。EXISTS は条件に合う行が見つかった時点で真にできるため、重複を DISTINCT で消す必要もありません。\n\nこの問題は確認用です。購入明細を一覧化するのではなく、顧客ごとの存在確認として読んでみましょう。",
+  "statement": "customers, orders, order_items, products から、food カテゴリの商品を購入したことがある顧客を表示してください。表示する列は customer_name。重複を出さず、名前の昇順で並べます。\n\n必要なのは購入明細ではなく購入の有無なので、EXISTS を使います。",
   "constraints": [
     {
       "name": "存在確認",

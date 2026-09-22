@@ -2,7 +2,7 @@
   "number": 25,
   "slug": "top-two-salaries-by-department",
   "title": "[挑戦しよう] 部署ごとの給与トップ2を出す",
-  "statement": "departments と employees から、部署ごとの給与順位が2位以内の社員を表示してください。出力する列は department_name, employee_name, salary, salary_rank です。\n\n同じ給与の社員は同じ順位にします。たとえば1位が2人いる場合、次の順位は2位ではなく2位として扱いたいので DENSE_RANK が便利です。department_name の昇順、salary_rank の昇順、employee_name の昇順で並べます。",
+  "statement": "departments と employees から、部署ごとの給与順位が2位以内の社員を表示してください。出力する列は department_name, employee_name, salary, salary_rank です。\n\n同額の給与は同順位とし、次の給与をその次の順位にします。順位には DENSE_RANK を使い、department_name、salary_rank、employee_name の順に昇順で並べてください。",
   "constraints": [
     {
       "name": "順位",
@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[departments]\nid,name\n1,sales\n2,dev\n3,hr\n\n[employees]\nid,name,department_id,salary\n101,Aoi,1,3800\n102,Ren,1,4200\n103,Mio,1,4200\n104,Sora,2,5000\n105,Yui,2,4800\n106,Kai,2,4500\n107,Haru,3,3600",
-  "starterSql": "WITH ranked_employees AS (\n  SELECT\n    departments.name AS department_name,\n    employees.name AS employee_name,\n    CAST(employees.salary AS INTEGER) AS salary\n    -- 部署ごとの給与順位を salary_rank として付けます\n  FROM employees\n  JOIN departments\n    ON departments.id = employees.department_id\n)\nSELECT\n  department_name,\n  employee_name,\n  salary,\n  salary_rank\nFROM ranked_employees\nWHERE salary_rank <= 2\nORDER BY department_name ASC, salary_rank ASC, employee_name ASC;",
-  "solutionSql": "WITH ranked_employees AS (\n  SELECT\n    departments.name AS department_name,\n    employees.name AS employee_name,\n    CAST(employees.salary AS INTEGER) AS salary,\n    DENSE_RANK() OVER (\n      PARTITION BY departments.id\n      ORDER BY CAST(employees.salary AS INTEGER) DESC\n    ) AS salary_rank\n  FROM employees\n  JOIN departments\n    ON departments.id = employees.department_id\n)\nSELECT\n  department_name,\n  employee_name,\n  salary,\n  salary_rank\nFROM ranked_employees\nWHERE salary_rank <= 2\nORDER BY department_name ASC, salary_rank ASC, employee_name ASC;",
+  "starterSql": "WITH ranked_employees AS (\n  SELECT\n    departments.name AS department_name,\n    employees.name AS employee_name,\n    employees.salary AS salary\n    -- 部署ごとの給与順位を salary_rank として付けます\n  FROM employees\n  JOIN departments\n    ON departments.id = employees.department_id\n)\nSELECT\n  department_name,\n  employee_name,\n  salary,\n  salary_rank\nFROM ranked_employees\nWHERE salary_rank <= 2\nORDER BY department_name ASC, salary_rank ASC, employee_name ASC;",
+  "solutionSql": "WITH ranked_employees AS (\n  SELECT\n    departments.name AS department_name,\n    employees.name AS employee_name,\n    employees.salary AS salary,\n    DENSE_RANK() OVER (\n      PARTITION BY departments.id\n      ORDER BY employees.salary DESC\n    ) AS salary_rank\n  FROM employees\n  JOIN departments\n    ON departments.id = employees.department_id\n)\nSELECT\n  department_name,\n  employee_name,\n  salary,\n  salary_rank\nFROM ranked_employees\nWHERE salary_rank <= 2\nORDER BY department_name ASC, salary_rank ASC, employee_name ASC;",
   "expectedCsv": "department_name,employee_name,salary,salary_rank\ndev,Sora,5000,1\ndev,Yui,4800,2\nhr,Haru,3600,1\nsales,Mio,4200,1\nsales,Ren,4200,1\nsales,Aoi,3800,2\n",
   "tests": [
     {

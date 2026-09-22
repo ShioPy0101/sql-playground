@@ -6,7 +6,7 @@
     "runOnFailed": true,
     "timeoutMs": 5000,
     "target": "fixed-query",
-    "query": "SELECT * FROM posts WHERE tenant_id = 42 ORDER BY created_at DESC;",
+    "query": "SELECT * FROM posts WHERE tenant_id = 42 ORDER BY created_at DESC LIMIT 20;",
     "rowCounts": [1000, 10000, 50000, 100000],
     "dataset": {
       "table": "posts",
@@ -22,7 +22,7 @@
   },
   "slug": "saas-avoid-over-indexing",
   "title": "[インデックス][考えてみよう] インデックスは多いほどよい？",
-  "statement": "投稿一覧で使う検索は、テナントで絞って新しい順に並べる処理です。この検索に必要なインデックスだけを作成してください。\n\nposts に idx_posts_tenant_created_at (tenant_id, created_at) を1本だけ作ります。user_id, title, body の個別インデックスは追加しません。",
+  "statement": "次の投稿一覧で使うインデックスを作成してください。\n\nSELECT *\nFROM posts\nWHERE tenant_id = 1\nORDER BY created_at DESC\nLIMIT 20;\n\n作成するのは idx_posts_tenant_created_at (tenant_id, created_at) の1本だけです。user_id, title, body にはインデックスを作成しません。",
   "constraints": [
     { "name": "作成するインデックス", "value": "idx_posts_tenant_created_at だけを作成します" },
     { "name": "列の順序", "value": "tenant_id, created_at の順にします" },
@@ -31,7 +31,7 @@
   "csv": "",
   "starterSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\n-- 検索要件に必要なインデックスだけを作成します",
   "solutionSql": "CREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\n\nCREATE INDEX idx_posts_tenant_created_at\nON posts(tenant_id, created_at);",
-  "checkSql": "SELECT il.name AS index_name, ii.name AS column_name, CAST(ii.seqno + 1 AS TEXT) AS column_order, CAST(il.\"unique\" AS TEXT) AS is_unique FROM pragma_index_list('posts') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.origin = 'c' ORDER BY index_name, column_order;",
+  "checkSql": "SELECT il.name AS index_name, ii.name AS column_name, ii.seqno + 1 AS column_order, il.\"unique\" AS is_unique FROM pragma_index_list('posts') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.origin = 'c' ORDER BY index_name, column_order;",
   "expectedCsv": "index_name,column_name,column_order,is_unique\nidx_posts_tenant_created_at,tenant_id,1,0\nidx_posts_tenant_created_at,created_at,2,0\n",
   "tests": [
     { "name": "必要なインデックスだけを確認", "csv": "", "expectedCsv": "index_name,column_name,column_order,is_unique\nidx_posts_tenant_created_at,tenant_id,1,0\nidx_posts_tenant_created_at,created_at,2,0\n" }

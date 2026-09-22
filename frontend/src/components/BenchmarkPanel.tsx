@@ -10,6 +10,34 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
+const benchmarkColumns = [
+  ["行数", "計測用の各テーブルに生成した行数"],
+  ["実行時間", "提出したSQLの実行にかかった時間"],
+  ["実行ステップ数", "SQLite内部で実行された処理ステップの数。処理量を比べる目安になります"],
+  ["全表走査ステップ数", "インデックスを使わず、テーブルを先頭から調べたステップの数"],
+  ["ソート回数", "SQLite内部でソート処理が行われた回数"],
+  ["自動インデックス行数", "SQLiteが一時的な自動インデックスを作る際に処理した行数"],
+  ["DBサイズ", "計測用データベースファイルの大きさ"],
+  ["データ生成時間", "計測用のテーブルへデータを投入するまでにかかった時間"],
+  ["実行計画", "SQLiteが選んだテーブルの読み方やインデックスの使い方"]
+] as const;
+
+function BenchmarkHeader({ label, description }: { label: string; description: string }) {
+  return (
+    <th>
+      <span
+        className="benchmark-column-heading"
+        data-tooltip={description}
+        tabIndex={0}
+        aria-label={`${label}: ${description}`}
+      >
+        {label}
+        <span className="benchmark-help-icon" aria-hidden="true">?</span>
+      </span>
+    </th>
+  );
+}
+
 export function BenchmarkPanel({ report, error, running }: BenchmarkPanelProps) {
   if (!running && !report && !error) {
     return null;
@@ -28,15 +56,9 @@ export function BenchmarkPanel({ report, error, running }: BenchmarkPanelProps) 
           <table className="benchmark-table">
             <thead>
               <tr>
-                <th>行数</th>
-                <th title="固定SELECTの実行にかかった時間">実行時間</th>
-                <th title="SQLite 内部で実行された処理量の目安">VM_STEP</th>
-                <th title="インデックスを使わず順番に調べたステップ数">FULLSCAN_STEP</th>
-                <th>ソート</th>
-                <th>自動index行数</th>
-                <th>DBサイズ</th>
-                <th>データ生成</th>
-                <th>実行計画</th>
+                {benchmarkColumns.map(([label, description]) => (
+                  <BenchmarkHeader key={label} label={label} description={description} />
+                ))}
               </tr>
             </thead>
             <tbody>

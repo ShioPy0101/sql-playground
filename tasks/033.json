@@ -1,8 +1,33 @@
 {
   "number": 33,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, total INTEGER NOT NULL); CREATE INDEX idx_orders_customer_id ON orders(customer_id);",
+    "datasets": [
+      {
+        "table": "customers",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('customer-%06d', row_number)" }
+        ]
+      },
+      {
+        "table": "orders",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "customer_id", "type": "INTEGER", "expression": "((row_number - 1) % 1000) + 1" },
+          { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" }
+        ]
+      }
+    ]
+  },
   "slug": "performance-tuning-avoid-n-plus-one-counts",
   "title": "[パフォーマンスチューニング][確認しよう] N+1をJOINとGROUP BYで避ける",
-  "statement": "customers と orders から、顧客ごとの注文数と合計金額を表示してください。出力する列は customer_name, order_count, total_amount です。注文がない顧客も order_count = 0, total_amount = 0 として表示します。customer_name の昇順で並べます。\n\nN+1問題とは、最初にN件の親データを取得したあと、その1件ごとに追加SQLを実行してしまう問題です。たとえば顧客一覧を1回で取得し、各顧客の注文数を顧客ごとに別SQLで数えると、顧客が100人なら 1 + 100 回のSQLになります。データが増えるほどDBへの往復が増え、遅くなりやすい典型例です。\n\nSQLでは、JOIN と GROUP BY を使うと「顧客一覧」と「注文集計」を1回のクエリでまとめて取得できます。この問題は確認用です。",
+  "statement": "customers と orders から、顧客ごとの注文数と合計金額を1回のクエリで取得してください。表示する列は customer_name, order_count, total_amount。注文がない顧客も 0 として残し、customer_name の昇順で並べます。\n\n顧客を取得したあと1人ずつ注文を問い合わせると、N+1回のSQLが必要になります。ここでは LEFT JOIN と GROUP BY でまとめて集計します。",
   "constraints": [
     {
       "name": "N+1回避",

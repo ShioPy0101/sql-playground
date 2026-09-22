@@ -186,6 +186,10 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
   }
 
   async function handleSubmit() {
+    if (!task) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
 
@@ -194,7 +198,18 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
       setJudgeResult(payload);
       setBenchmarkReport(null);
       setBenchmarkError("");
-      if (task?.benchmark?.enabled && (payload.passed || task.benchmark.runOnFailed)) {
+
+      try {
+        const execution = await executeSQL(task.input ?? task.csv, query, task.checkSql, task.inputType ?? "csv");
+        setResult(execution.csv);
+        setMetrics(execution.metrics ?? null);
+      } catch (executionFailure) {
+        setResult("");
+        setMetrics(null);
+        setError(executionFailure instanceof Error ? executionFailure.message : "SQL の実行に失敗しました");
+      }
+
+      if (task.benchmark?.enabled && (payload.passed || task.benchmark.runOnFailed)) {
         setIsBenchmarking(true);
         void benchmarkTask(number, query)
           .then(setBenchmarkReport)

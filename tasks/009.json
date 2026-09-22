@@ -2,7 +2,7 @@
   "number": 9,
   "slug": "group-by-customer-confirm",
   "title": "[確認しよう] GROUP BYでグループごとに数える",
-  "statement": "orders テーブルから customer ごとの注文数を求め、customer と order_count を表示してください。\n\nGROUP BY は「同じ値ごとに行をまとめる」ための書き方です。GROUP BY customer と書くと、customer が同じ行を1つのグループとして扱います。\nそのうえで COUNT(*) を使うと、グループごとの行数を数えられます。\n\nこの問題は確認用です。customer ごとに結果が1行ずつ出ることを見てみましょう。",
+  "statement": "orders テーブルから customer ごとの注文数を求め、customer と order_count を表示してください。customer ごとに GROUP BY し、COUNT(*) で件数を数えます。",
   "constraints": [
     {
       "name": "グループ",

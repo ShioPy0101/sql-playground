@@ -2,7 +2,7 @@
   "number": 3,
   "slug": "where-category-confirm",
   "title": "[確認しよう] WHEREで行をしぼる",
-  "statement": "items テーブルから category が fruit の行だけを表示してください。\n\nWHERE は「どの行を取り出すか」という条件を書く場所です。SELECT が列を選ぶのに対して、WHERE は行を選びます。\ncategory = 'fruit' は「category 列の値が fruit と等しい行」という意味です。文字列は 'fruit' のようにシングルクォートで囲みます。\n\nこの問題は確認用です。用意されているSQLを実行して、条件に合う行だけが残ることを確認しましょう。",
+  "statement": "items テーブルから category が fruit の行だけを表示してください。行の条件は WHERE に書き、文字列の fruit はシングルクォートで囲みます。",
   "constraints": [
     {
       "name": "条件",

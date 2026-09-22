@@ -15,7 +15,7 @@
   ],
   "csv": "[products]\nid,name,price\n1,ノート,300\n2,マウス,1200\n3,キーボード,2500\n4,モニター,18000\n5,ペン,100",
   "starterSql": "SELECT\n  name,\n  price\nFROM products\nORDER BY -- ここに並び順を書きます\nLIMIT -- 件数を書きます;",
-  "solutionSql": "SELECT\n  name,\n  price\nFROM products\nORDER BY CAST(price AS INTEGER) DESC, name ASC\nLIMIT 3;",
+  "solutionSql": "SELECT\n  name,\n  price\nFROM products\nORDER BY price DESC, name ASC\nLIMIT 3;",
   "expectedCsv": "name,price\nモニター,18000\nキーボード,2500\nマウス,1200\n",
   "tests": [
     {

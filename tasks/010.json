@@ -15,7 +15,7 @@
   ],
   "csv": "[sales]\nid,category,quantity\n1,drink,3\n2,food,2\n3,drink,4\n4,book,1",
   "starterSql": "SELECT\n  category,\n  -- quantity の合計を total_quantity として出します\nFROM sales\nGROUP BY category\nORDER BY category ASC;",
-  "solutionSql": "SELECT\n  category,\n  SUM(CAST(quantity AS INTEGER)) AS total_quantity\nFROM sales\nGROUP BY category\nORDER BY category ASC;",
+  "solutionSql": "SELECT\n  category,\n  SUM(quantity) AS total_quantity\nFROM sales\nGROUP BY category\nORDER BY category ASC;",
   "expectedCsv": "category,total_quantity\nbook,1\ndrink,7\nfood,2\n",
   "tests": [
     {

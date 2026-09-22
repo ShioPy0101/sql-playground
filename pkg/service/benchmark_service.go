@@ -13,7 +13,7 @@ import (
 	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
 
-var benchmarkSubmissionSelectPattern = regexp.MustCompile(`(?is)^\s*SELECT\s+\*\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)\s+WHERE\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+(?:\s+AND\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+)*(?:\s+ORDER\s+BY\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(?:ASC|DESC))?)?\s*$`)
+var benchmarkSubmissionSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*(?:SELECT|WITH)\b`)
 var benchmarkFixedSelectPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*SELECT\b`)
 
 var benchmarkDDLPattern = regexp.MustCompile(`(?is)^\s*(?:(?:--[^\n]*(?:\n|$))|(?:/\*.*?\*/\s*))*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX)\b`)
@@ -239,17 +239,9 @@ func benchmarkInputs(taskMode string, config BenchmarkConfig, submission string)
 	}
 }
 
-func benchmarkTable(query string) string {
-	trimmed := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(query), ";"))
-	matches := benchmarkSubmissionSelectPattern.FindStringSubmatch(trimmed)
-	if len(matches) == 2 {
-		return matches[1]
-	}
-	return ""
-}
-
 func matchesBenchmarkSubmissionSelect(statement string) bool {
-	return benchmarkTable(statement) != ""
+	statements := helper.SplitSQLStatements(statement)
+	return len(statements) == 1 && benchmarkSubmissionSelectPattern.MatchString(statements[0])
 }
 
 func matchesBenchmarkFixedSelect(statement string) bool {

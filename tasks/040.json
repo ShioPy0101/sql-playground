@@ -1,8 +1,25 @@
 {
   "number": 40,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE events (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, event_type TEXT NOT NULL, event_at TEXT NOT NULL); CREATE INDEX idx_events_type_time ON events(event_type, event_at);",
+    "dataset": {
+      "table": "events",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "user_id", "type": "INTEGER", "expression": "((row_number - 1) % 1000) + 1" },
+        { "name": "event_type", "type": "TEXT", "expression": "CASE WHEN row_number % 4 = 0 THEN 'view' ELSE 'login' END" },
+        { "name": "event_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d %02d:%02d:00', ((row_number - 1) % 3) + 4, ((row_number - 1) % 28) + 1, row_number % 24, row_number % 60)" }
+      ]
+    }
+  },
   "slug": "performance-tuning-sargable-date-range",
   "title": "[パフォーマンスチューニング][書いてみよう] 日付列を加工せず範囲でしぼる",
-  "statement": "events テーブルから、2026年5月の login イベント数をユーザーごとに集計してください。出力する列は user_id, login_count です。login_count が多い順、user_id の昇順で並べます。\n\nWHERE substr(event_at, 1, 7) = '2026-05' のように列を関数で加工すると、DBは event_at のインデックスを使いにくくなることがあります。日付や日時は event_at >= '2026-05-01' AND event_at < '2026-06-01' のような半開区間で書くと、範囲検索として扱いやすくなります。このようにインデックスを使いやすい条件は sargable と呼ばれます。",
+  "statement": "events テーブルから、2026年5月の login イベント数をユーザーごとに集計してください。表示する列は user_id, login_count。login_count の降順、user_id の昇順で並べます。\n\nevent_at は加工せず、2026-05-01 以上、2026-06-01 未満の範囲で絞り込みます。",
   "constraints": [
     {
       "name": "日付範囲",
@@ -14,8 +31,8 @@
     }
   ],
   "csv": "[events]\nid,user_id,event_type,event_at\n1,1,login,2026-05-01 09:00:00\n2,1,view,2026-05-01 09:05:00\n3,1,login,2026-05-31 23:59:00\n4,2,login,2026-05-15 12:00:00\n5,2,login,2026-06-01 00:00:00\n6,3,login,2026-04-30 23:59:00\n7,3,login,2026-05-20 08:00:00",
-  "starterSql": "SELECT\n  user_id,\n  COUNT(*) AS login_count\nFROM events\nWHERE event_type = 'login'\n  -- event_at を加工せず、5月の範囲条件を書きます\nGROUP BY user_id\nORDER BY login_count DESC, CAST(user_id AS INTEGER) ASC;",
-  "solutionSql": "SELECT\n  user_id,\n  COUNT(*) AS login_count\nFROM events\nWHERE event_type = 'login'\n  AND event_at >= '2026-05-01'\n  AND event_at < '2026-06-01'\nGROUP BY user_id\nORDER BY login_count DESC, CAST(user_id AS INTEGER) ASC;",
+  "starterSql": "SELECT\n  user_id,\n  COUNT(*) AS login_count\nFROM events\nWHERE event_type = 'login'\n  -- event_at を加工せず、5月の範囲条件を書きます\nGROUP BY user_id\nORDER BY login_count DESC, user_id ASC;",
+  "solutionSql": "SELECT\n  user_id,\n  COUNT(*) AS login_count\nFROM events\nWHERE event_type = 'login'\n  AND event_at >= '2026-05-01'\n  AND event_at < '2026-06-01'\nGROUP BY user_id\nORDER BY login_count DESC, user_id ASC;",
   "expectedCsv": "user_id,login_count\n1,2\n2,1\n3,1\n",
   "tests": [
     {

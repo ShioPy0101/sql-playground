@@ -1,8 +1,27 @@
 {
   "number": 32,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_name TEXT NOT NULL, status TEXT NOT NULL, ordered_at TEXT NOT NULL, total INTEGER NOT NULL, memo TEXT NOT NULL); CREATE INDEX idx_orders_status_ordered_at ON orders(status, ordered_at);",
+    "dataset": {
+      "table": "orders",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "customer_name", "type": "TEXT", "expression": "printf('customer-%06d', ((row_number - 1) % 10000) + 1)" },
+        { "name": "status", "type": "TEXT", "expression": "CASE WHEN row_number % 4 = 0 THEN 'canceled' WHEN row_number % 4 = 1 THEN 'pending' ELSE 'paid' END" },
+        { "name": "ordered_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d', ((row_number - 1) % 6) + 1, ((row_number - 1) % 28) + 1)" },
+        { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" },
+        { "name": "memo", "type": "TEXT", "expression": "printf('benchmark memo %d', row_number)" }
+      ]
+    }
+  },
   "slug": "performance-tuning-filter-and-project",
   "title": "[パフォーマンスチューニング][確認しよう] 必要な行と列だけ取り出す",
-  "statement": "orders テーブルから、2026-05-01 以降の paid 注文だけを表示してください。出力する列は id, customer_name, total です。total が大きい順、id の昇順で並べます。\n\nパフォーマンスチューニングとは、同じ結果をより少ない時間、少ないメモリ、少ない読み取り量で返せるようにSQLやテーブル設計を見直すことです。最初の基本は「必要な行だけ WHERE でしぼる」「必要な列だけ SELECT する」です。SELECT * で広い表を読むと、使わない列までアプリに返すことになり、データ量が増えるほど無駄が大きくなります。\n\nこの問題は確認用です。用意されているSQLを実行して、しぼり込みと列選択の形を確認しましょう。",
+  "statement": "orders テーブルから、2026-05-01 以降の paid 注文を取得してください。表示する列は id, customer_name, total。total の降順、id の昇順で並べます。\n\n不要な行は WHERE で除き、SELECT には使う列だけを書きます。",
   "constraints": [
     {
       "name": "行のしぼり込み",

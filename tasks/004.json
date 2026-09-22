@@ -2,7 +2,7 @@
   "number": 4,
   "slug": "where-price-write",
   "title": "[書いてみよう] 数値の条件でしぼる",
-  "statement": "products テーブルから price が 1000 以上の商品について、name と price を表示してください。\n\nCSVから読み込んだ値は文字として入ることがあるため、数値として比べるときは CAST(price AS INTEGER) を使います。",
+  "statement": "products テーブルから price が 1000 以上の商品について、name と price を表示してください。",
   "constraints": [
     {
       "name": "条件",
@@ -15,7 +15,7 @@
   ],
   "csv": "[products]\nid,name,price\n1,ノート,300\n2,マウス,1200\n3,キーボード,2500\n4,ペン,100",
   "starterSql": "SELECT\n  name,\n  price\nFROM products\nWHERE -- ここに条件を書きます;",
-  "solutionSql": "SELECT\n  name,\n  price\nFROM products\nWHERE CAST(price AS INTEGER) >= 1000;",
+  "solutionSql": "SELECT\n  name,\n  price\nFROM products\nWHERE price >= 1000;",
   "expectedCsv": "name,price\nマウス,1200\nキーボード,2500\n",
   "tests": [
     {

@@ -442,6 +442,61 @@ h2 {
   white-space: normal;
 }
 
+.benchmark-column-heading {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: help;
+  outline-offset: 3px;
+}
+
+.benchmark-help-icon {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid #9aa0a6;
+  border-radius: 50%;
+  color: #5f6368;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.benchmark-column-heading::after {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 7px);
+  z-index: 4;
+  width: max-content;
+  max-width: 260px;
+  padding: 7px 9px;
+  border-radius: 4px;
+  color: #ffffff;
+  background: #3c4043;
+  content: attr(data-tooltip);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity 100ms ease, transform 100ms ease;
+  white-space: normal;
+}
+
+.benchmark-column-heading:hover::after,
+.benchmark-column-heading:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.benchmark-table th:nth-last-child(-n + 2) .benchmark-column-heading::after {
+  right: 0;
+  left: auto;
+}
+
 .benchmark-table code {
   display: block;
   padding-left: 8px;

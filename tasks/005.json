@@ -2,7 +2,7 @@
   "number": 5,
   "slug": "order-by-score-confirm",
   "title": "[確認しよう] ORDER BYで並べ替える",
-  "statement": "students テーブルを score が高い順に並べて、name と score を表示してください。\n\nORDER BY は結果の並び順を指定します。ORDER BY score DESC は「score の降順」、つまり大きい値から小さい値へ並べるという意味です。反対に ASC は昇順です。\n\nこの問題は確認用です。SELECT で列を選び、FROM でテーブルを決め、ORDER BY で最後に並び順を整える流れを見てみましょう。",
+  "statement": "students テーブルから name と score を表示し、score の高い順に並べてください。降順には ORDER BY ... DESC を使います。",
   "constraints": [
     {
       "name": "並び順",
@@ -10,8 +10,8 @@
     }
   ],
   "csv": "[students]\nid,name,score\n1,Aoi,82\n2,Ren,95\n3,Mio,78\n4,Sora,95",
-  "starterSql": "SELECT\n  name,\n  score\nFROM students\nORDER BY CAST(score AS INTEGER) DESC, name ASC;",
-  "solutionSql": "SELECT\n  name,\n  score\nFROM students\nORDER BY CAST(score AS INTEGER) DESC, name ASC;",
+  "starterSql": "SELECT\n  name,\n  score\nFROM students\nORDER BY score DESC, name ASC;",
+  "solutionSql": "SELECT\n  name,\n  score\nFROM students\nORDER BY score DESC, name ASC;",
   "expectedCsv": "name,score\nRen,95\nSora,95\nAoi,82\nMio,78\n",
   "tests": [
     {

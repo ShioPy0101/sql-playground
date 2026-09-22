@@ -1,8 +1,25 @@
 {
   "number": 41,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, status TEXT NOT NULL, total INTEGER NOT NULL); CREATE INDEX idx_orders_customer_id ON orders(customer_id);",
+    "dataset": {
+      "table": "orders",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "customer_id", "type": "INTEGER", "expression": "((row_number - 1) % 1000) + 1" },
+        { "name": "status", "type": "TEXT", "expression": "CASE WHEN row_number % 4 IN (0, 1) THEN 'paid' WHEN row_number % 4 = 2 THEN 'canceled' ELSE 'pending' END" },
+        { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" }
+      ]
+    }
+  },
   "slug": "performance-tuning-one-pass-conditional-aggregation",
   "title": "[パフォーマンスチューニング][書いてみよう] 条件付き集計で何度も読まない",
-  "statement": "orders テーブルから、顧客ごとの paid 注文数、canceled 注文数、paid 注文の合計金額を表示してください。出力する列は customer_id, paid_count, canceled_count, paid_total です。paid_count が1以上の顧客だけを表示し、paid_total が大きい順、customer_id の昇順で並べます。\n\n同じ orders テーブルに対して「paid の件数」「canceled の件数」「paid の合計」を別々のサブクエリで求めると、同じ表を何度も読むことになります。CASE WHEN を使った条件付き集計なら、1回の GROUP BY で複数の指標をまとめて計算できます。読み取り量を減らす、というチューニングの基本を確認しましょう。",
+  "statement": "orders テーブルから、顧客ごとの paid 注文数、canceled 注文数、paid 注文の合計金額を求めてください。表示する列は customer_id, paid_count, canceled_count, paid_total。paid 注文がある顧客だけを、paid_total の降順、customer_id の昇順で並べます。\n\norders は1回だけ読み、CASE WHEN を使った条件付き集計で3つの値をまとめて計算します。",
   "constraints": [
     {
       "name": "条件付き集計",

@@ -211,6 +211,26 @@ func TestSaaSCurriculumBenchmarksRunAllStages(t *testing.T) {
 	}
 }
 
+func TestPerformanceCurriculumBenchmarksRun(t *testing.T) {
+	for number := 32; number <= 41; number++ {
+		task, err := LoadTaskDefinition(fmt.Sprintf("%d", number))
+		if err != nil {
+			t.Fatalf("LoadTaskDefinition(%d) returned error: %v", number, err)
+		}
+		if task.Mode != "sql" || task.Benchmark == nil || !task.Benchmark.Enabled || task.Benchmark.Target != "submission" {
+			t.Fatalf("task %d benchmark configuration = %#v", number, task.Benchmark)
+		}
+
+		report, err := NewBenchmarkService().Run(task.Mode, *task.Benchmark, task.SolutionSQL)
+		if err != nil {
+			t.Fatalf("task %d benchmark returned error: %v", number, err)
+		}
+		if report.Status != "completed" || len(report.Results) != len(task.Benchmark.RowCounts) {
+			t.Fatalf("task %d report = %#v, want all configured stages", number, report)
+		}
+	}
+}
+
 func TestBenchmarkServiceStopsAtConfiguredTimeout(t *testing.T) {
 	task, err := LoadTaskDefinition("45")
 	if err != nil {
@@ -293,6 +313,37 @@ func TestBenchmarkServiceRejectsUnsafeSQLTarget(t *testing.T) {
 	}, `DELETE FROM posts;`)
 	if err == nil {
 		t.Fatal("Run accepted non-SELECT submission")
+	}
+}
+
+func TestBenchmarkServiceAcceptsSingleReadOnlyCTE(t *testing.T) {
+	report, err := NewBenchmarkService().Run("sql", BenchmarkConfig{
+		Enabled:   true,
+		Target:    "submission",
+		RowCounts: []int{1_000},
+		SchemaSQL: benchmarkPostsSchema(),
+		Dataset:   benchmarkPostsDataset(),
+	}, `WITH tenant_posts AS (
+		SELECT * FROM posts WHERE tenant_id = 42
+	) SELECT COUNT(*) FROM tenant_posts;`)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if report.Status != "completed" || len(report.Results) != 1 {
+		t.Fatalf("report = %#v, want one completed stage", report)
+	}
+}
+
+func TestBenchmarkServiceRejectsMultipleSubmissionStatements(t *testing.T) {
+	_, err := NewBenchmarkService().Run("sql", BenchmarkConfig{
+		Enabled:   true,
+		Target:    "submission",
+		RowCounts: []int{1_000},
+		SchemaSQL: benchmarkPostsSchema(),
+		Dataset:   benchmarkPostsDataset(),
+	}, `SELECT * FROM posts; SELECT * FROM posts;`)
+	if err == nil {
+		t.Fatal("Run accepted multiple statements")
 	}
 }
 

@@ -2,7 +2,7 @@
   "number": 7,
   "slug": "count-rows-confirm",
   "title": "[確認しよう] COUNTで行数を数える",
-  "statement": "orders テーブルの行数を total_orders という列名で表示してください。\n\nCOUNT(*) は行数を数える集計関数です。集計関数は、複数の行をまとめて1つの値にします。\nAS total_orders は、結果の列名に別名をつける書き方です。画面に出る列名が total_orders になります。\n\nこの問題は確認用です。COUNT(*) と AS の形をそのまま実行して確認しましょう。",
+  "statement": "orders テーブルの行数を数え、total_orders という列名で表示してください。行数には COUNT(*)、列の別名には AS を使います。",
   "constraints": [
     {
       "name": "集計",

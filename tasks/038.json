@@ -1,8 +1,34 @@
 {
   "number": 38,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL); CREATE TABLE order_items (id INTEGER PRIMARY KEY, product_id INTEGER NOT NULL, quantity INTEGER NOT NULL); CREATE INDEX idx_order_items_product_id ON order_items(product_id);",
+    "datasets": [
+      {
+        "table": "products",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('product-%06d', row_number)" },
+          { "name": "category", "type": "TEXT", "expression": "CASE WHEN row_number % 3 = 0 THEN 'food' WHEN row_number % 3 = 1 THEN 'home' ELSE 'stationery' END" }
+        ]
+      },
+      {
+        "table": "order_items",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "product_id", "type": "INTEGER", "expression": "row_number * 2" },
+          { "name": "quantity", "type": "INTEGER", "expression": "(row_number % 5) + 1" }
+        ]
+      }
+    ]
+  },
   "slug": "performance-tuning-not-exists-anti-join",
   "title": "[パフォーマンスチューニング][書いてみよう] NOT EXISTSで未使用データを探す",
-  "statement": "products と order_items から、一度も注文されていない商品を表示してください。出力する列は product_name, category です。category の昇順、product_name の昇順で並べます。\n\n「関連する行が存在しないもの」を探すときは NOT EXISTS が読みやすく、インデックスがあるDBでは効率よく判定しやすい書き方です。LEFT JOIN して NULL を探す方法もありますが、ここでは「注文明細が存在しない」という意図をそのままSQLにします。",
+  "statement": "products と order_items から、一度も注文されていない商品を表示してください。表示する列は product_name, category。category、product_name の順に昇順で並べます。\n\n注文明細が存在しないことを NOT EXISTS で判定します。",
   "constraints": [
     {
       "name": "未注文",

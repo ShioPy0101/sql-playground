@@ -38,7 +38,7 @@
   "csv": "",
   "starterSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  -- tenant_id を追加します\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  -- tenant_id を追加します\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL\n);",
   "solutionSql": "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE posts (\n  id INTEGER PRIMARY KEY,\n  tenant_id INTEGER NOT NULL,\n  user_id INTEGER NOT NULL,\n  body TEXT NOT NULL\n);",
-  "checkSql": "SELECT m.name AS table_name, p.name AS column_name, UPPER(p.type) AS type, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS primary_key FROM sqlite_master AS m JOIN pragma_table_info(m.name) AS p WHERE m.type = 'table' AND m.name IN ('users', 'posts') ORDER BY table_name, column_name;",
+  "checkSql": "SELECT m.name AS table_name, p.name AS column_name, UPPER(p.type) AS type, p.\"notnull\" AS required, p.pk AS primary_key FROM sqlite_master AS m JOIN pragma_table_info(m.name) AS p WHERE m.type = 'table' AND m.name IN ('users', 'posts') ORDER BY table_name, column_name;",
   "expectedCsv": "table_name,column_name,type,required,primary_key\nposts,body,TEXT,1,0\nposts,id,INTEGER,0,1\nposts,tenant_id,INTEGER,1,0\nposts,user_id,INTEGER,1,0\nusers,id,INTEGER,0,1\nusers,name,TEXT,1,0\nusers,tenant_id,INTEGER,1,0\n",
   "tests": [
     { "name": "tenant_id を含むスキーマ確認", "csv": "", "expectedCsv": "table_name,column_name,type,required,primary_key\nposts,body,TEXT,1,0\nposts,id,INTEGER,0,1\nposts,tenant_id,INTEGER,1,0\nposts,user_id,INTEGER,1,0\nusers,id,INTEGER,0,1\nusers,name,TEXT,1,0\nusers,tenant_id,INTEGER,1,0\n" }

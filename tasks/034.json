@@ -1,8 +1,34 @@
 {
   "number": 34,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, ordered_at TEXT NOT NULL, total INTEGER NOT NULL); CREATE INDEX idx_orders_customer_timeline ON orders(customer_id, ordered_at DESC, id DESC);",
+    "datasets": [
+      {
+        "table": "customers",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('customer-%06d', row_number)" }
+        ]
+      },
+      {
+        "table": "orders",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "customer_id", "type": "INTEGER", "expression": "((row_number - 1) % 1000) + 1" },
+          { "name": "ordered_at", "type": "TEXT", "expression": "printf('2026-05-%02d %02d:%02d:00', ((row_number - 1) % 28) + 1, row_number % 24, row_number % 60)" },
+          { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" }
+        ]
+      }
+    ]
+  },
   "slug": "performance-tuning-latest-order-with-window",
   "title": "[パフォーマンスチューニング][書いてみよう] 直近データを1回で取り出す",
-  "statement": "customers と orders から、顧客ごとの直近注文を表示してください。出力する列は customer_name, latest_ordered_at, latest_total です。注文がない顧客は表示しません。customer_name の昇順で並べます。\n\nアプリ側で顧客を取得してから、顧客ごとに「直近の注文を1件取るSQL」を実行するとN+1問題になります。SQL側で ROW_NUMBER() を使い、顧客ごとに注文を新しい順に並べて rn = 1 だけを残すと、直近注文を1回のクエリでまとめて取得できます。",
+  "statement": "customers と orders から、顧客ごとの直近注文を1回のクエリで取得してください。表示する列は customer_name, latest_ordered_at, latest_total。注文がない顧客は除き、customer_name の昇順で並べます。\n\nROW_NUMBER() で顧客ごとに注文を新しい順に並べ、1件目だけを残します。",
   "constraints": [
     {
       "name": "直近判定",

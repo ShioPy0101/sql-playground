@@ -2,7 +2,7 @@
   "number": 44,
   "slug": "table-design-create-employees-with-foreign-key",
   "title": "[テーブル設計][書いてみよう] 外部キーを持つ employees テーブルを作成する",
-  "statement": "部署と社員を保存する departments テーブル、employees テーブルを CREATE TABLE で作成してください。\n\nまず departments は id INTEGER PRIMARY KEY, name TEXT NOT NULL を持ちます。次に employees は id INTEGER PRIMARY KEY, department_id INTEGER NOT NULL, name TEXT NOT NULL, hired_at TEXT NOT NULL を持ち、department_id には departments(id) への FOREIGN KEY を付けます。\n\n外部キーは、別のテーブルの行を参照する列であることを表します。社員がどの部署に所属するかを department_id で表し、departments の id と対応させます。",
+  "statement": "部署と社員を保存する departments, employees テーブルを作成してください。departments は id INTEGER PRIMARY KEY, name TEXT NOT NULL。employees は id INTEGER PRIMARY KEY, department_id INTEGER NOT NULL, name TEXT NOT NULL, hired_at TEXT NOT NULL とします。department_id から departments(id) への外部キーも設定してください。",
   "constraints": [
     {
       "name": "作成するテーブル",
@@ -20,7 +20,7 @@
   "csv": "",
   "starterSql": "CREATE TABLE departments (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE employees (\n  id INTEGER PRIMARY KEY,\n  department_id INTEGER,\n  name TEXT NOT NULL,\n  hired_at TEXT\n);",
   "solutionSql": "CREATE TABLE departments (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n\nCREATE TABLE employees (\n  id INTEGER PRIMARY KEY,\n  department_id INTEGER NOT NULL,\n  name TEXT NOT NULL,\n  hired_at TEXT NOT NULL,\n  FOREIGN KEY (department_id) REFERENCES departments(id)\n);",
-  "checkSql": "SELECT 'column' AS check_type, m.name AS table_name, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM sqlite_master AS m JOIN pragma_table_info(m.name) AS p WHERE m.type = 'table' AND m.name IN ('departments', 'employees') UNION ALL SELECT 'foreign_key' AS check_type, m.name AS table_name, f.\"from\" AS item_name, f.\"table\" || '.' || f.\"to\" AS detail, '' AS required, '' AS key_order FROM sqlite_master AS m JOIN pragma_foreign_key_list(m.name) AS f WHERE m.type = 'table' AND m.name IN ('departments', 'employees') ORDER BY check_type, table_name, item_name;",
+  "checkSql": "SELECT 'column' AS check_type, m.name AS table_name, p.name AS item_name, UPPER(p.type) AS detail, p.\"notnull\" AS required, p.pk AS key_order FROM sqlite_master AS m JOIN pragma_table_info(m.name) AS p WHERE m.type = 'table' AND m.name IN ('departments', 'employees') UNION ALL SELECT 'foreign_key' AS check_type, m.name AS table_name, f.\"from\" AS item_name, f.\"table\" || '.' || f.\"to\" AS detail, '' AS required, '' AS key_order FROM sqlite_master AS m JOIN pragma_foreign_key_list(m.name) AS f WHERE m.type = 'table' AND m.name IN ('departments', 'employees') ORDER BY check_type, table_name, item_name;",
   "expectedCsv": "check_type,table_name,item_name,detail,required,key_order\ncolumn,departments,id,INTEGER,0,1\ncolumn,departments,name,TEXT,1,0\ncolumn,employees,department_id,INTEGER,1,0\ncolumn,employees,hired_at,TEXT,1,0\ncolumn,employees,id,INTEGER,0,1\ncolumn,employees,name,TEXT,1,0\nforeign_key,employees,department_id,departments.id,,\n",
   "tests": [
     {

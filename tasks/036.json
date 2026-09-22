@@ -1,8 +1,35 @@
 {
   "number": 36,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, status TEXT NOT NULL, ordered_at TEXT NOT NULL, total INTEGER NOT NULL); CREATE INDEX idx_orders_filter ON orders(status, ordered_at, total);",
+    "datasets": [
+      {
+        "table": "customers",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "name", "type": "TEXT", "expression": "printf('customer-%06d', row_number)" }
+        ]
+      },
+      {
+        "table": "orders",
+        "columns": [
+          { "name": "id", "type": "INTEGER", "expression": "row_number" },
+          { "name": "customer_id", "type": "INTEGER", "expression": "((row_number - 1) % 1000) + 1" },
+          { "name": "status", "type": "TEXT", "expression": "CASE WHEN row_number % 3 = 0 THEN 'paid' ELSE 'pending' END" },
+          { "name": "ordered_at", "type": "TEXT", "expression": "printf('2026-%02d-%02d', ((row_number - 1) % 6) + 1, ((row_number - 1) % 28) + 1)" },
+          { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" }
+        ]
+      }
+    ]
+  },
   "slug": "performance-tuning-filter-before-join",
   "title": "[パフォーマンスチューニング][書いてみよう] JOINする前に対象をしぼる",
-  "statement": "customers と orders から、2026-05-01 以降の paid 注文のうち total が 1000 以上のものを表示してください。出力する列は order_id, customer_name, total です。total が大きい順、order_id の昇順で並べます。\n\nJOINの前に注文をしぼれるなら、先にしぼるとJOIN対象の行数を減らせます。実際のDBでは status, ordered_at, total などに合うインデックスがあると、不要な注文行を早い段階で読み飛ばせます。SQLを書くときも「どの表をどこまで小さくしてからJOINできるか」を意識しましょう。",
+  "statement": "customers と orders から、2026-05-01 以降の paid 注文のうち total が 1000 以上のものを表示してください。表示する列は order_id, customer_name, total。total の降順、order_id の昇順で並べます。\n\n先に orders を絞り込み、その結果を customers と結合します。",
   "constraints": [
     {
       "name": "先にしぼる",

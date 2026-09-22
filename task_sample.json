@@ -18,8 +18,8 @@
     }
   ],
   "csv": "[players]\nname,team,score\nAlice,red,82\nBob,blue,91\nChika,red,88\nDaichi,blue,76",
-  "starterSql": "SELECT\n  team,\n  COUNT(*) AS members,\n  AVG(CAST(score AS INTEGER)) AS average_score\nFROM players\nGROUP BY team\nORDER BY average_score DESC, team ASC;",
-  "solutionSql": "SELECT\n  team,\n  COUNT(*) AS members,\n  AVG(CAST(score AS INTEGER)) AS average_score\nFROM players\nGROUP BY team\nORDER BY average_score DESC, team ASC;",
+  "starterSql": "SELECT\n  team,\n  COUNT(*) AS members,\n  AVG(score) AS average_score\nFROM players\nGROUP BY team\nORDER BY average_score DESC, team ASC;",
+  "solutionSql": "SELECT\n  team,\n  COUNT(*) AS members,\n  AVG(score) AS average_score\nFROM players\nGROUP BY team\nORDER BY average_score DESC, team ASC;",
   "expectedCsv": "team,members,average_score\nred,2,85.0\nblue,2,83.5\n",
   "tests": [
     {

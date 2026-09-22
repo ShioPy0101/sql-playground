@@ -21,7 +21,7 @@
   },
   "slug": "table-design-create-orders-with-indexes",
   "title": "[テーブル設計][書いてみよう] 検索に使う列へインデックスを作成する",
-  "statement": "注文を保存する orders テーブルを CREATE TABLE で作成し、よく検索に使う列へインデックスを作成してください。\n\n必要な列は id, customer_id, ordered_at, status, total です。id は INTEGER PRIMARY KEY、customer_id は INTEGER NOT NULL、ordered_at と status は TEXT NOT NULL、total は INTEGER NOT NULL にします。\n\nこのテーブルでは「特定の顧客の注文を探す」「日付で注文を絞り込む」検索が多い想定です。そのため customer_id に idx_orders_customer_id、ordered_at に idx_orders_ordered_at という通常のインデックスを作成します。\n\nインデックスは本の索引のようなもので、WHERE customer_id = ... や WHERE ordered_at >= ... のような検索を速くしやすくします。ただし、書き込み時にはインデックスも更新されるため、何でも貼るのではなく検索条件としてよく使う列に絞るのが基本です。",
+  "statement": "注文を保存する orders テーブルを作成してください。列は id, customer_id, ordered_at, status, total。id を INTEGER PRIMARY KEY とし、ほかの列はすべて NOT NULL にします。\n\n顧客別検索に使う idx_orders_customer_id と、日付検索に使う idx_orders_ordered_at も作成してください。",
   "constraints": [
     {
       "name": "テーブル",
@@ -39,7 +39,7 @@
   "csv": "",
   "starterSql": "CREATE TABLE orders (\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  status TEXT NOT NULL,\n  total INTEGER NOT NULL\n);\n\n-- customer_id と ordered_at にインデックスを作成します",
   "solutionSql": "CREATE TABLE orders (\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  status TEXT NOT NULL,\n  total INTEGER NOT NULL\n);\n\nCREATE INDEX idx_orders_customer_id ON orders(customer_id);\nCREATE INDEX idx_orders_ordered_at ON orders(ordered_at);",
-  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, CAST(p.\"notnull\" AS TEXT) AS required, CAST(p.pk AS TEXT) AS key_order FROM pragma_table_info('orders') AS p UNION ALL SELECT 'index' AS check_type, il.name AS item_name, ii.name AS detail, CAST(il.\"unique\" AS TEXT) AS required, CAST(ii.seqno + 1 AS TEXT) AS key_order FROM pragma_index_list('orders') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.name IN ('idx_orders_customer_id', 'idx_orders_ordered_at') ORDER BY check_type, item_name;",
+  "checkSql": "SELECT 'column' AS check_type, p.name AS item_name, UPPER(p.type) AS detail, p.\"notnull\" AS required, p.pk AS key_order FROM pragma_table_info('orders') AS p UNION ALL SELECT 'index' AS check_type, il.name AS item_name, ii.name AS detail, il.\"unique\" AS required, ii.seqno + 1 AS key_order FROM pragma_index_list('orders') AS il JOIN pragma_index_info(il.name) AS ii WHERE il.name IN ('idx_orders_customer_id', 'idx_orders_ordered_at') ORDER BY check_type, item_name;",
   "expectedCsv": "check_type,item_name,detail,required,key_order\ncolumn,customer_id,INTEGER,1,0\ncolumn,id,INTEGER,0,1\ncolumn,ordered_at,TEXT,1,0\ncolumn,status,TEXT,1,0\ncolumn,total,INTEGER,1,0\nindex,idx_orders_customer_id,customer_id,0,1\nindex,idx_orders_ordered_at,ordered_at,0,1\n",
   "tests": [
     {

@@ -2,7 +2,7 @@
   "number": 17,
   "slug": "left-join-confirm",
   "title": "[確認しよう] LEFT JOINで左の表を残す",
-  "statement": "customers と orders を LEFT JOIN して、すべての顧客について customer_name と order_id を表示してください。\n\nINNER JOIN は両方に対応する行があるものだけを出します。一方、LEFT JOIN は左側に書いたテーブルの行をすべて残します。\n今回の左側は customers です。注文がない顧客も結果に残り、その order_id は空になります。\n\nこの問題は確認用です。INNER JOIN との違いとして「左の表の行が消えない」ことを確認しましょう。",
+  "statement": "customers と orders を LEFT JOIN し、すべての顧客について customer_name と order_id を表示してください。注文がない顧客も残し、その order_id は空にします。",
   "constraints": [
     {
       "name": "結合の種類",
@@ -14,8 +14,8 @@
     }
   ],
   "csv": "[customers]\nid,name\n1,Aoi\n2,Ren\n3,Mio\n\n[orders]\nid,customer_id,total\n101,1,1200\n102,1,500\n103,2,800",
-  "starterSql": "SELECT\n  customers.name AS customer_name,\n  orders.id AS order_id\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nORDER BY CAST(customers.id AS INTEGER) ASC, CAST(orders.id AS INTEGER) ASC;",
-  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  orders.id AS order_id\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nORDER BY CAST(customers.id AS INTEGER) ASC, CAST(orders.id AS INTEGER) ASC;",
+  "starterSql": "SELECT\n  customers.name AS customer_name,\n  orders.id AS order_id\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nORDER BY customers.id ASC, orders.id ASC;",
+  "solutionSql": "SELECT\n  customers.name AS customer_name,\n  orders.id AS order_id\nFROM customers\nLEFT JOIN orders\n  ON orders.customer_id = customers.id\nORDER BY customers.id ASC, orders.id ASC;",
   "expectedCsv": "customer_name,order_id\nAoi,101\nAoi,102\nRen,103\nMio,\n",
   "tests": [
     {

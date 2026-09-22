@@ -1,8 +1,24 @@
 {
   "number": 39,
+  "mode": "sql",
+  "benchmark": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "target": "submission",
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "schemaSql": "CREATE TABLE orders (id INTEGER PRIMARY KEY, ordered_at TEXT NOT NULL, total INTEGER NOT NULL); CREATE INDEX idx_orders_timeline ON orders(ordered_at DESC, id DESC);",
+    "dataset": {
+      "table": "orders",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "expression": "row_number" },
+        { "name": "ordered_at", "type": "TEXT", "expression": "printf('2026-05-%02d', ((row_number - 1) % 28) + 1)" },
+        { "name": "total", "type": "INTEGER", "expression": "(row_number % 5000) + 100" }
+      ]
+    }
+  },
   "slug": "performance-tuning-keyset-pagination",
   "title": "[パフォーマンスチューニング][確認しよう] OFFSETではなくキーセットページングを使う",
-  "statement": "orders テーブルから、ordered_at DESC, id DESC の並びで、カーソルより後の3件を表示してください。カーソルは ordered_at = '2026-05-05', id = 105 です。出力する列は id, ordered_at, total です。\n\nOFFSET はページ番号が深くなるほど、読み飛ばす行が増えて遅くなりやすい方法です。キーセットページングは「最後に見た ordered_at と id より後」を条件にして次のページを取る方法です。並び順に使う列へインデックスを用意しやすく、深いページでも安定しやすいのが利点です。\n\nこの問題は確認用です。",
+  "statement": "orders を ordered_at DESC, id DESC で並べ、カーソルより後の3件を表示してください。カーソルは ordered_at = '2026-05-05', id = 105。表示する列は id, ordered_at, total です。\n\nOFFSET は使わず、最後に取得した ordered_at と id を WHERE の条件にします。",
   "constraints": [
     {
       "name": "並び順",

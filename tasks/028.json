@@ -15,7 +15,7 @@
   ],
   "csv": "[reservations]\nid,room,guest,start_at,end_at\n1,A,Aoi,2026-05-01 09:00,2026-05-01 10:00\n2,A,Ren,2026-05-01 09:30,2026-05-01 11:00\n3,A,Mio,2026-05-01 11:00,2026-05-01 12:00\n4,B,Sora,2026-05-01 13:00,2026-05-01 14:00\n5,B,Yui,2026-05-01 13:30,2026-05-01 13:45\n6,B,Kai,2026-05-01 14:00,2026-05-01 15:00",
   "starterSql": "SELECT\n  first.room,\n  first.guest AS first_guest,\n  second.guest AS second_guest\nFROM reservations AS first\nJOIN reservations AS second\n  ON first.room = second.room\n -- 同じ組み合わせを1回だけ比較し、時間帯の重複を判定します\nORDER BY first.room ASC, first.guest ASC, second.guest ASC;",
-  "solutionSql": "SELECT\n  first.room,\n  first.guest AS first_guest,\n  second.guest AS second_guest\nFROM reservations AS first\nJOIN reservations AS second\n  ON first.room = second.room\n AND CAST(first.id AS INTEGER) < CAST(second.id AS INTEGER)\n AND first.start_at < second.end_at\n AND second.start_at < first.end_at\nORDER BY first.room ASC, first.guest ASC, second.guest ASC;",
+  "solutionSql": "SELECT\n  first.room,\n  first.guest AS first_guest,\n  second.guest AS second_guest\nFROM reservations AS first\nJOIN reservations AS second\n  ON first.room = second.room\n AND first.id < second.id\n AND first.start_at < second.end_at\n AND second.start_at < first.end_at\nORDER BY first.room ASC, first.guest ASC, second.guest ASC;",
   "expectedCsv": "room,first_guest,second_guest\nA,Aoi,Ren\nB,Sora,Yui\n",
   "tests": [
     {

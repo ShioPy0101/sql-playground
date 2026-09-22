@@ -2,7 +2,7 @@
   "number": 15,
   "slug": "join-aggregate-confirm",
   "title": "[確認しよう] JOINしてから集計する",
-  "statement": "customers と orders をつないで、顧客ごとの注文合計を求めてください。customer_name と total_amount を表示し、total_amount が高い順に並べます。\n\nJOIN で表をつないだあとに GROUP BY を使うと、別テーブルの名前を表示しながら集計できます。\n今回は orders.customer_id と customers.id をつなぎ、customers.name ごとに SUM(total) を計算します。\n\nこの問題は確認用です。JOIN、GROUP BY、SUM が順番に組み合わさる流れを見てみましょう。",
+  "statement": "customers と orders を結合し、顧客ごとの注文合計を求めてください。customer_name と total_amount を表示し、total_amount の高い順に並べます。",
   "constraints": [
     {
       "name": "結合",

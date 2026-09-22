@@ -54,13 +54,13 @@ func newPostgresSubmissionStore(databaseURL string) (*SubmissionStore, error) {
 	return store, nil
 }
 
-func (s *SubmissionStore) Insert(submission TaskSubmission) error {
+func (s *SubmissionStore) Insert(submission TaskSubmission) (int, error) {
 	casesJSON, err := json.Marshal(submission.Cases)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	_, err = s.db.Exec(s.rebind(`
+	query := `
 		INSERT INTO task_submissions (
 			event_id,
 			user_id,
@@ -72,7 +72,8 @@ func (s *SubmissionStore) Insert(submission TaskSubmission) error {
 			cases_json,
 			submitted_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`),
+	`
+	args := []any{
 		submission.EventID,
 		submission.UserID,
 		submission.TaskNumber,
@@ -82,8 +83,37 @@ func (s *SubmissionStore) Insert(submission TaskSubmission) error {
 		submission.Passed,
 		string(casesJSON),
 		submission.SubmittedAt.Format(time.RFC3339Nano),
-	)
-	return err
+	}
+	if s.dialect == "postgres" {
+		var id int
+		err := s.db.QueryRow(s.rebind(query+" RETURNING id"), args...).Scan(&id)
+		return id, err
+	}
+	result, err := s.db.Exec(query, args...)
+	if err != nil {
+		return 0, err
+	}
+	id, err := result.LastInsertId()
+	return int(id), err
+}
+
+func (s *SubmissionStore) UpdateBenchmarkReport(submissionID int, userID string, taskNumber int, report BenchmarkReport) error {
+	reportJSON, err := json.Marshal(report)
+	if err != nil {
+		return err
+	}
+	result, err := s.db.Exec(s.rebind(`UPDATE task_submissions SET benchmark_json = ? WHERE id = ? AND user_id = ? AND task_number = ?`), string(reportJSON), submissionID, userID, taskNumber)
+	if err != nil {
+		return err
+	}
+	updated, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if updated != 1 {
+		return fmt.Errorf("submission %d was not found", submissionID)
+	}
+	return nil
 }
 
 func (s *SubmissionStore) List() ([]TaskSubmission, error) {
@@ -98,6 +128,7 @@ func (s *SubmissionStore) List() ([]TaskSubmission, error) {
 			query,
 			passed,
 			cases_json,
+			benchmark_json,
 			submitted_at
 		FROM task_submissions
 		ORDER BY submitted_at DESC, id DESC
@@ -128,6 +159,7 @@ func (s *SubmissionStore) ListByUserTask(userID string, taskNumber int, eventID 
 			query,
 			passed,
 			cases_json,
+			benchmark_json,
 			submitted_at
 		FROM task_submissions
 		WHERE user_id = ? AND task_number = ? AND `+whereEvent+`
@@ -198,6 +230,7 @@ func scanSubmissions(rows *sql.Rows) ([]TaskSubmission, error) {
 	for rows.Next() {
 		var submission TaskSubmission
 		var casesJSON string
+		var benchmarkJSON sql.NullString
 		var submittedAt string
 		if err := rows.Scan(
 			&submission.ID,
@@ -209,6 +242,7 @@ func scanSubmissions(rows *sql.Rows) ([]TaskSubmission, error) {
 			&submission.Query,
 			&submission.Passed,
 			&casesJSON,
+			&benchmarkJSON,
 			&submittedAt,
 		); err != nil {
 			return nil, err
@@ -216,6 +250,13 @@ func scanSubmissions(rows *sql.Rows) ([]TaskSubmission, error) {
 
 		if err := json.Unmarshal([]byte(casesJSON), &submission.Cases); err != nil {
 			return nil, fmt.Errorf("invalid submission cases for id %d: %w", submission.ID, err)
+		}
+		if benchmarkJSON.Valid && benchmarkJSON.String != "" {
+			var report BenchmarkReport
+			if err := json.Unmarshal([]byte(benchmarkJSON.String), &report); err != nil {
+				return nil, fmt.Errorf("invalid submission benchmark for id %d: %w", submission.ID, err)
+			}
+			submission.BenchmarkReport = &report
 		}
 
 		parsedAt, err := time.Parse(time.RFC3339Nano, submittedAt)
@@ -251,6 +292,7 @@ func (s *SubmissionStore) migrate() error {
 			query TEXT NOT NULL,
 			passed INTEGER NOT NULL,
 			cases_json TEXT NOT NULL,
+			benchmark_json TEXT NULL,
 			submitted_at TEXT NOT NULL
 		);
 
@@ -268,6 +310,11 @@ func (s *SubmissionStore) migrate() error {
 	}
 	if !s.sqliteColumnExists("task_submissions", "event_id") {
 		if _, err := s.db.Exec(`ALTER TABLE task_submissions ADD COLUMN event_id INTEGER NULL`); err != nil {
+			return err
+		}
+	}
+	if !s.sqliteColumnExists("task_submissions", "benchmark_json") {
+		if _, err := s.db.Exec(`ALTER TABLE task_submissions ADD COLUMN benchmark_json TEXT NULL`); err != nil {
 			return err
 		}
 	}
@@ -293,10 +340,12 @@ func (s *SubmissionStore) migratePostgres() error {
 			query TEXT NOT NULL,
 			passed BOOLEAN NOT NULL,
 			cases_json TEXT NOT NULL,
+			benchmark_json TEXT NULL,
 			submitted_at TEXT NOT NULL
 		);
 
 		ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS event_id BIGINT NULL;
+		ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS benchmark_json TEXT NULL;
 
 		CREATE INDEX IF NOT EXISTS idx_task_submissions_submitted_at
 			ON task_submissions (submitted_at DESC, id DESC);

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { benchmarkTask, checkAdminSolutions, fetchAdminSubmissions, TaskSolutionCheck, TaskSubmission } from "../api/client";
-import type { BenchmarkReport } from "../api/client";
+import { checkAdminSolutions, fetchAdminSubmissions, TaskSolutionCheck, TaskSubmission } from "../api/client";
 import { BenchmarkPanel } from "../components/BenchmarkPanel";
 import { AdminEventsPanel } from "./AdminEventsPanel";
 
@@ -22,9 +21,6 @@ export function AdminPage() {
   const [selectedID, setSelectedID] = useState<number | null>(null);
   const [solutionChecks, setSolutionChecks] = useState<TaskSolutionCheck[]>([]);
   const [isCheckingSolutions, setIsCheckingSolutions] = useState(false);
-  const [benchmarkReport, setBenchmarkReport] = useState<BenchmarkReport | null>(null);
-  const [benchmarkError, setBenchmarkError] = useState("");
-  const [isBenchmarking, setIsBenchmarking] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -54,28 +50,6 @@ export function AdminPage() {
     () => submissions.find((submission) => submission.id === selectedID) ?? submissions[0],
     [selectedID, submissions]
   );
-
-  useEffect(() => {
-    setBenchmarkReport(null);
-    setBenchmarkError("");
-    setIsBenchmarking(false);
-  }, [selectedID]);
-
-  async function handleBenchmark() {
-    if (!selected?.benchmarkEnabled) {
-      return;
-    }
-    setIsBenchmarking(true);
-    setBenchmarkReport(null);
-    setBenchmarkError("");
-    try {
-      setBenchmarkReport(await benchmarkTask(String(selected.taskNumber), selected.query));
-    } catch (err) {
-      setBenchmarkError(err instanceof Error ? err.message : "性能計測に失敗しました");
-    } finally {
-      setIsBenchmarking(false);
-    }
-  }
 
   async function handleCheckSolutions() {
     setIsCheckingSolutions(true);
@@ -237,13 +211,6 @@ export function AdminPage() {
                   <dd>{selected.passed ? "正解" : "不正解"}</dd>
                 </div>
               </dl>
-              {selected.benchmarkEnabled ? (
-                <div className="admin-detail-actions">
-                  <button className="secondary-button" disabled={isBenchmarking} onClick={() => void handleBenchmark()}>
-                    {isBenchmarking ? "計測中..." : "速度を計測"}
-                  </button>
-                </div>
-              ) : null}
               <pre className="sql-preview">{selected.query}</pre>
               <div className="admin-cases">
                 {selected.cases.map((testCase) => (
@@ -255,7 +222,7 @@ export function AdminPage() {
                   </div>
                 ))}
               </div>
-              <BenchmarkPanel report={benchmarkReport} error={benchmarkError} running={isBenchmarking} />
+              <BenchmarkPanel report={selected.benchmarkReport ?? null} error="" running={false} />
             </aside>
           ) : null}
         </div>

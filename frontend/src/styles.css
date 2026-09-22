@@ -1311,13 +1311,6 @@ th {
   overflow-wrap: anywhere;
 }
 
-.admin-detail-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e8eaed;
-}
-
 .admin-detail .benchmark-panel {
   border: 0;
   border-top: 1px solid #e8eaed;

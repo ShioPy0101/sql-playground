@@ -299,7 +299,7 @@ func (s *SubmissionStore) EventParticipants(eventID int64) ([]EventParticipant, 
 }
 
 func (s *SubmissionStore) EventSubmissions(eventID int64) ([]EventSubmission, error) {
-	rows, err := s.db.Query(s.rebind(`SELECT s.id, s.event_id, s.user_id, s.task_number, s.task_slug, s.task_title, s.query, s.passed, s.cases_json, s.submitted_at, COALESCE(p.username, '') FROM task_submissions s LEFT JOIN event_participants p ON p.event_id = s.event_id AND p.user_id = s.user_id WHERE s.event_id = ? ORDER BY s.submitted_at ASC, s.id ASC`), eventID)
+	rows, err := s.db.Query(s.rebind(`SELECT s.id, s.event_id, s.user_id, s.task_number, s.task_slug, s.task_title, s.query, s.passed, s.cases_json, s.benchmark_json, s.submitted_at, COALESCE(p.username, '') FROM task_submissions s LEFT JOIN event_participants p ON p.event_id = s.event_id AND p.user_id = s.user_id WHERE s.event_id = ? ORDER BY s.submitted_at ASC, s.id ASC`), eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -308,11 +308,19 @@ func (s *SubmissionStore) EventSubmissions(eventID int64) ([]EventSubmission, er
 	for rows.Next() {
 		var item EventSubmission
 		var casesJSON, submittedAt string
-		if err := rows.Scan(&item.ID, &item.EventID, &item.UserID, &item.TaskNumber, &item.TaskSlug, &item.TaskTitle, &item.Query, &item.Passed, &casesJSON, &submittedAt, &item.Username); err != nil {
+		var benchmarkJSON sql.NullString
+		if err := rows.Scan(&item.ID, &item.EventID, &item.UserID, &item.TaskNumber, &item.TaskSlug, &item.TaskTitle, &item.Query, &item.Passed, &casesJSON, &benchmarkJSON, &submittedAt, &item.Username); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(casesJSON), &item.Cases); err != nil {
 			return nil, fmt.Errorf("invalid submission cases for id %d: %w", item.ID, err)
+		}
+		if benchmarkJSON.Valid && benchmarkJSON.String != "" {
+			var report BenchmarkReport
+			if err := json.Unmarshal([]byte(benchmarkJSON.String), &report); err != nil {
+				return nil, fmt.Errorf("invalid submission benchmark for id %d: %w", item.ID, err)
+			}
+			item.BenchmarkReport = &report
 		}
 		item.SubmittedAt, err = time.Parse(time.RFC3339Nano, submittedAt)
 		if err != nil {

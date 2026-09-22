@@ -114,6 +114,7 @@ export type TaskListResponse = {
 export type TaskSubmitResult = {
   passed: boolean;
   cases: TaskCaseResult[];
+  submissionId?: number;
 };
 
 export type TaskCaseResult = {
@@ -139,7 +140,7 @@ export type TaskSubmission = {
   passed: boolean;
   cases: TaskCaseResult[];
   submittedAt: string;
-  benchmarkEnabled: boolean;
+  benchmarkReport?: BenchmarkReport;
 };
 
 export type Event = {
@@ -240,8 +241,8 @@ export async function submitTask(number: string, query: string) {
   return postJSON<TaskSubmitResult>(`/api/tasks/${number}/submit`, { query });
 }
 
-export async function benchmarkTask(number: string, query: string) {
-  return postJSON<BenchmarkReport>(`/api/tasks/${number}/benchmark`, { query });
+export async function benchmarkTask(number: string, query: string, submissionId?: number) {
+  return postJSON<BenchmarkReport>(`/api/tasks/${number}/benchmark`, { query, submissionId });
 }
 
 export async function submitEventTask(slug: string, number: string, query: string) {

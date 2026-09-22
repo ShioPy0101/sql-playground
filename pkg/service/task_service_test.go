@@ -85,12 +85,22 @@ func TestTaskServiceSubmitNeverRunsConfiguredBenchmark(t *testing.T) {
 	if !result.Passed {
 		t.Fatalf("Submit() passed = false, want true: %#v", result)
 	}
+	if result.SubmissionID <= 0 {
+		t.Fatalf("submission ID = %d, want persisted submission", result.SubmissionID)
+	}
+	report := BenchmarkReport{Status: "completed", Query: "SELECT id FROM input;", Results: []BenchmarkResult{{RowCount: 1_000, VMSteps: 42}}}
+	if err := service.SaveBenchmarkReport(result.SubmissionID, "benchmark_admin", 906, report); err != nil {
+		t.Fatalf("SaveBenchmarkReport returned error: %v", err)
+	}
+	if err := service.SaveBenchmarkReport(result.SubmissionID, "another_user", 906, report); err == nil {
+		t.Fatal("SaveBenchmarkReport allowed another user to overwrite the submission")
+	}
 	submissions, err := service.Submissions()
 	if err != nil {
 		t.Fatalf("Submissions returned error: %v", err)
 	}
-	if len(submissions) != 1 || !submissions[0].BenchmarkEnabled {
-		t.Fatalf("submissions = %#v, want benchmark-enabled submission", submissions)
+	if len(submissions) != 1 || submissions[0].BenchmarkReport == nil || submissions[0].BenchmarkReport.Results[0].VMSteps != 42 {
+		t.Fatalf("submissions = %#v, want saved benchmark report", submissions)
 	}
 }
 

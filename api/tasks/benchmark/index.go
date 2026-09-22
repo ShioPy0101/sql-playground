@@ -9,7 +9,8 @@ import (
 )
 
 type benchmarkRequest struct {
-	Query string `json:"query"`
+	Query        string `json:"query"`
+	SubmissionID int    `json:"submissionId"`
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +35,22 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httpapi.WriteJSON(w, http.StatusBadRequest, httpapi.ErrorResponse{Message: err.Error()})
 		return
+	}
+	if req.SubmissionID > 0 {
+		userID, err := httpapi.EnsureUserID(w, r)
+		if err != nil {
+			httpapi.WriteJSON(w, http.StatusInternalServerError, httpapi.ErrorResponse{Message: "failed to identify user"})
+			return
+		}
+		taskService, err := httpapi.TaskService()
+		if err != nil {
+			httpapi.WriteJSON(w, http.StatusInternalServerError, httpapi.ErrorResponse{Message: "failed to initialize tasks"})
+			return
+		}
+		if err := taskService.SaveBenchmarkReport(req.SubmissionID, userID, task.Number, report); err != nil {
+			httpapi.WriteJSON(w, http.StatusBadRequest, httpapi.ErrorResponse{Message: err.Error()})
+			return
+		}
 	}
 	httpapi.WriteJSON(w, http.StatusOK, report)
 }

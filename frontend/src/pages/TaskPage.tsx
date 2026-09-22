@@ -193,7 +193,7 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
 
       if (task.benchmark?.enabled && (payload.passed || task.benchmark.runOnFailed)) {
         setIsBenchmarking(true);
-        void benchmarkTask(number, query)
+        void benchmarkTask(number, query, payload.submissionId)
           .then(setBenchmarkReport)
           .catch((benchmarkFailure) => {
             setBenchmarkError(

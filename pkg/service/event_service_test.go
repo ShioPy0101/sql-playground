@@ -30,8 +30,12 @@ func TestEventSubmissionsAreIsolatedFromNormalAndOtherEvents(t *testing.T) {
 	if _, err := service.SubmitEventTask(eventA.Slug, "1", "SELECT 2;", "user_same"); err != nil {
 		t.Fatalf("event A submit returned error: %v", err)
 	}
-	if _, err := service.SubmitEventTask(eventB.Slug, "1", "SELECT 3;", "user_same"); err != nil {
+	resultB, err := service.SubmitEventTask(eventB.Slug, "1", "SELECT 3;", "user_same")
+	if err != nil {
 		t.Fatalf("event B submit returned error: %v", err)
+	}
+	if err := service.SaveBenchmarkReport(resultB.SubmissionID, "user_same", 1, BenchmarkReport{Status: "completed", Results: []BenchmarkResult{{RowCount: 1_000, VMSteps: 7}}}); err != nil {
+		t.Fatalf("save event benchmark returned error: %v", err)
 	}
 
 	normal, err := service.SubmissionsForUserTask("1", "user_same")
@@ -56,6 +60,9 @@ func TestEventSubmissionsAreIsolatedFromNormalAndOtherEvents(t *testing.T) {
 	}
 	if detail.SubmissionCount != 1 || detail.Submissions[0].Username != "Alice B" || detail.Submissions[0].Query != "SELECT 3;" {
 		t.Fatalf("event B detail = %#v", detail)
+	}
+	if detail.Submissions[0].BenchmarkReport == nil || detail.Submissions[0].BenchmarkReport.Results[0].VMSteps != 7 {
+		t.Fatalf("event B benchmark = %#v", detail.Submissions[0].BenchmarkReport)
 	}
 }
 

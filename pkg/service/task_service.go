@@ -82,8 +82,9 @@ type PublicTaskSummary struct {
 }
 
 type TaskSubmitResult struct {
-	Passed bool             `json:"passed"`
-	Cases  []TaskCaseResult `json:"cases"`
+	Passed       bool             `json:"passed"`
+	Cases        []TaskCaseResult `json:"cases"`
+	SubmissionID int              `json:"submissionId,omitempty"`
 }
 
 type TaskSolutionCheck struct {
@@ -115,17 +116,17 @@ type taskSource struct {
 }
 
 type TaskSubmission struct {
-	ID               int              `json:"id"`
-	EventID          *int64           `json:"eventId"`
-	UserID           string           `json:"userId"`
-	TaskNumber       int              `json:"taskNumber"`
-	TaskSlug         string           `json:"taskSlug"`
-	TaskTitle        string           `json:"taskTitle"`
-	Query            string           `json:"query"`
-	Passed           bool             `json:"passed"`
-	Cases            []TaskCaseResult `json:"cases"`
-	SubmittedAt      time.Time        `json:"submittedAt"`
-	BenchmarkEnabled bool             `json:"benchmarkEnabled"`
+	ID              int              `json:"id"`
+	EventID         *int64           `json:"eventId"`
+	UserID          string           `json:"userId"`
+	TaskNumber      int              `json:"taskNumber"`
+	TaskSlug        string           `json:"taskSlug"`
+	TaskTitle       string           `json:"taskTitle"`
+	Query           string           `json:"query"`
+	Passed          bool             `json:"passed"`
+	Cases           []TaskCaseResult `json:"cases"`
+	SubmittedAt     time.Time        `json:"submittedAt"`
+	BenchmarkReport *BenchmarkReport `json:"benchmarkReport,omitempty"`
 }
 
 type UserTaskProgress struct {
@@ -244,19 +245,7 @@ func (s *TaskService) SubmitForUser(number string, query string, userID string) 
 }
 
 func (s *TaskService) Submissions() ([]TaskSubmission, error) {
-	submissions, err := s.submissions.List()
-	if err != nil {
-		return nil, err
-	}
-	for index := range submissions {
-		submissions[index].BenchmarkEnabled = s.taskBenchmarkEnabled(submissions[index].TaskNumber)
-	}
-	return submissions, nil
-}
-
-func (s *TaskService) taskBenchmarkEnabled(number int) bool {
-	task, err := s.LoadTask(strconv.Itoa(number))
-	return err == nil && task.Benchmark != nil && task.Benchmark.Enabled
+	return s.submissions.List()
 }
 
 func (s *TaskService) SubmissionsForUserTask(number string, userID string) ([]TaskSubmission, error) {
@@ -310,9 +299,11 @@ func (s *TaskService) submit(number string, query string, userID string, eventID
 
 	result := s.checkTask(task, query)
 	if userID != "" {
-		if err := s.recordSubmission(task, query, result, userID, eventID); err != nil {
+		submissionID, err := s.recordSubmission(task, query, result, userID, eventID)
+		if err != nil {
 			return TaskSubmitResult{}, err
 		}
+		result.SubmissionID = submissionID
 	}
 
 	return result, nil
@@ -558,7 +549,7 @@ func normalizedCSV(text string) ([][]string, error) {
 	return rows, nil
 }
 
-func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string, eventID *int64) error {
+func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmitResult, userID string, eventID *int64) (int, error) {
 	submission := TaskSubmission{
 		EventID:     eventID,
 		UserID:      userID,
@@ -571,4 +562,8 @@ func (s *TaskService) recordSubmission(task Task, query string, result TaskSubmi
 		SubmittedAt: time.Now().UTC(),
 	}
 	return s.submissions.Insert(submission)
+}
+
+func (s *TaskService) SaveBenchmarkReport(submissionID int, userID string, taskNumber int, report BenchmarkReport) error {
+	return s.submissions.UpdateBenchmarkReport(submissionID, userID, taskNumber, report)
 }

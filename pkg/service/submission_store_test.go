@@ -30,4 +30,7 @@ func TestSubmissionStoreMigratesLegacyTableWithNullableEventID(t *testing.T) {
 	if !store.sqliteColumnExists("task_submissions", "event_id") {
 		t.Fatalf("event_id column was not added")
 	}
+	if !store.sqliteColumnExists("task_submissions", "benchmark_json") {
+		t.Fatalf("benchmark_json column was not added")
+	}
 }

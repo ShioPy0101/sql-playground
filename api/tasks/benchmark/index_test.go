@@ -20,7 +20,17 @@ func TestHandlerRunsConfiguredBenchmark(t *testing.T) {
 		"benchmark": {
 			"enabled": true,
 			"target": "submission",
-			"rowCounts": [1000]
+			"rowCounts": [1000],
+			"schemaSql": "CREATE TABLE posts (id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL, user_id INTEGER NOT NULL, body TEXT NOT NULL);",
+			"dataset": {
+				"table": "posts",
+				"columns": [
+					{"name":"id", "expression":"row_number"},
+					{"name":"tenant_id", "expression":"(row_number % 100) + 1"},
+					{"name":"user_id", "expression":"(row_number % 50000) + 1"},
+					{"name":"body", "expression":"'benchmark body'"}
+				]
+			}
 		}
 	}`)
 	t.Setenv("TASKS_DIR", taskDir)

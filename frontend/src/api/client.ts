@@ -54,6 +54,14 @@ export type BenchmarkConfig = {
   target: "submission" | "fixed-query";
   query?: string;
   rowCounts: number[];
+  schemaSql?: string;
+  dataset?: {
+    table: string;
+    columns: Array<{
+      name: string;
+      expression: string;
+    }>;
+  };
 };
 
 export type BenchmarkResult = {

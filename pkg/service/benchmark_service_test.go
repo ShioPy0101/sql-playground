@@ -11,6 +11,8 @@ func TestBenchmarkServiceRunsAllConfiguredStages(t *testing.T) {
 		Enabled:   true,
 		Target:    "submission",
 		RowCounts: []int{1_000, 10_000, 50_000, 100_000},
+		SchemaSQL: benchmarkPostsSchema(),
+		Dataset:   benchmarkPostsDataset(),
 	}, `SELECT * FROM posts WHERE tenant_id = 42;`)
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
@@ -52,6 +54,7 @@ func TestBenchmarkServiceAppliesDDLBeforeFixedQuery(t *testing.T) {
 		Target:    "fixed-query",
 		Query:     `SELECT * FROM posts WHERE tenant_id = 42;`,
 		RowCounts: []int{1_000},
+		Dataset:   benchmarkPostsDataset(),
 	}, `
 		CREATE TABLE posts (
 			id INTEGER PRIMARY KEY,
@@ -82,6 +85,7 @@ func TestBenchmarkServiceMeasuresOrdersIndexTask(t *testing.T) {
 		Target:    "fixed-query",
 		Query:     `SELECT * FROM orders WHERE customer_id = 42;`,
 		RowCounts: []int{1_000},
+		Dataset:   benchmarkOrdersDataset(),
 	}, `
 		CREATE TABLE orders (
 			id INTEGER PRIMARY KEY,
@@ -139,6 +143,7 @@ func TestBenchmarkServiceStopsAfterStageFailure(t *testing.T) {
 		Target:    "fixed-query",
 		Query:     `SELECT * FROM posts WHERE tenant_id = 42;`,
 		RowCounts: []int{1_000, 10_000},
+		Dataset:   benchmarkPostsDataset(),
 	}, `CREATE TABLE wrong_table (id INTEGER PRIMARY KEY);`)
 	if err != nil {
 		t.Fatalf("Run returned configuration error: %v", err)
@@ -148,6 +153,40 @@ func TestBenchmarkServiceStopsAfterStageFailure(t *testing.T) {
 	}
 	if !strings.Contains(report.StoppedReason, "1000行") {
 		t.Fatalf("stopped reason = %q, want first stage", report.StoppedReason)
+	}
+}
+
+func benchmarkPostsSchema() string {
+	return `CREATE TABLE posts (
+		id INTEGER PRIMARY KEY,
+		tenant_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		body TEXT NOT NULL
+	);`
+}
+
+func benchmarkPostsDataset() *BenchmarkDataset {
+	return &BenchmarkDataset{
+		Table: "posts",
+		Columns: []BenchmarkColumn{
+			{Name: "id", Expression: "row_number"},
+			{Name: "tenant_id", Expression: "(row_number % 100) + 1"},
+			{Name: "user_id", Expression: "(row_number % 50000) + 1"},
+			{Name: "body", Expression: "'benchmark body'"},
+		},
+	}
+}
+
+func benchmarkOrdersDataset() *BenchmarkDataset {
+	return &BenchmarkDataset{
+		Table: "orders",
+		Columns: []BenchmarkColumn{
+			{Name: "id", Expression: "row_number"},
+			{Name: "customer_id", Expression: "(row_number % 100) + 1"},
+			{Name: "ordered_at", Expression: "printf('2026-%02d-%02d', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1)"},
+			{Name: "status", Expression: "CASE WHEN row_number % 4 = 0 THEN 'canceled' ELSE 'paid' END"},
+			{Name: "total", Expression: "(row_number % 5000) + 100"},
+		},
 	}
 }
 

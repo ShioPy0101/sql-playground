@@ -5,7 +5,17 @@
     "enabled": true,
     "target": "fixed-query",
     "query": "SELECT * FROM orders WHERE customer_id = 42;",
-    "rowCounts": [1000, 10000, 50000, 100000]
+    "rowCounts": [1000, 10000, 50000, 100000],
+    "dataset": {
+      "table": "orders",
+      "columns": [
+        { "name": "id", "expression": "row_number" },
+        { "name": "customer_id", "expression": "(row_number % 100) + 1" },
+        { "name": "ordered_at", "expression": "printf('2026-%02d-%02d', ((row_number - 1) % 12) + 1, ((row_number - 1) % 28) + 1)" },
+        { "name": "status", "expression": "CASE WHEN row_number % 4 = 0 THEN 'canceled' ELSE 'paid' END" },
+        { "name": "total", "expression": "(row_number % 5000) + 100" }
+      ]
+    }
   },
   "slug": "table-design-create-orders-with-indexes",
   "title": "[テーブル設計][書いてみよう] 検索に使う列へインデックスを作成する",

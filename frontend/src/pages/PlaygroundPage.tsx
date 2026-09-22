@@ -5,6 +5,7 @@ import { EditorPanel } from "../components/EditorPanel";
 import { ResultPanel } from "../components/ResultPanel";
 import { formatTableLabel } from "../utils/csv";
 import { decodePlaygroundState, encodePlaygroundState } from "../utils/shareState";
+import { schemaFromCSV, schemaFromDDL } from "../utils/sqlAutocomplete";
 
 const sampleCSV = `name,team,score
 Alice,red,82
@@ -64,6 +65,11 @@ export function PlaygroundPage() {
     () => (inputFormat === "csv" ? formatTableLabel(csv) : "SQLite DDL + INSERT"),
     [csv, inputFormat]
   );
+  const autocompleteSchema = useMemo(
+    () => (inputFormat === "sql" ? schemaFromDDL(inputSQL) : schemaFromCSV(csv)),
+    [csv, inputFormat, inputSQL]
+  );
+  const emptySchema = useMemo(() => ({ tables: [] }), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,6 +200,7 @@ export function PlaygroundPage() {
           label={tableLabel}
           value={inputFormat === "csv" ? csv : inputSQL}
           ariaLabel={inputFormat === "csv" ? "CSV入力" : "SQL入力"}
+          sqlAutocomplete={inputFormat === "sql" ? emptySchema : undefined}
           onChange={inputFormat === "csv" ? setCSV : setInputSQL}
           headingAccessory={
             <div className="input-format-toggle" aria-label="入力形式">
@@ -216,6 +223,7 @@ export function PlaygroundPage() {
           label={dialect === "sqlite" ? "SQLite" : dialect}
           value={query}
           ariaLabel="SQLクエリ"
+          sqlAutocomplete={autocompleteSchema}
           onChange={setQuery}
         />
         <ResultPanel

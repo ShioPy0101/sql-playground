@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   fetchCurrentUser,
   fetchEvent,
@@ -21,6 +21,7 @@ import { JudgePanel } from "../components/JudgePanel";
 import { ResultPanel } from "../components/ResultPanel";
 import { TaskDetails } from "../components/TaskDetails";
 import { executeSQL } from "../api/client";
+import { schemaFromCSV, schemaFromDDL } from "../utils/sqlAutocomplete";
 
 type TaskPageProps = {
   number: string;
@@ -56,6 +57,14 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBenchmarking, setIsBenchmarking] = useState(false);
+  const autocompleteSchema = useMemo(() => {
+    if (!task) {
+      return { tables: [] };
+    }
+    return task.inputType === "sql"
+      ? schemaFromDDL(task.input ?? "")
+      : schemaFromCSV(task.input ?? task.csv);
+  }, [task]);
 
   useEffect(() => {
     let ignore = false;
@@ -303,6 +312,7 @@ export function TaskPage({ number, eventSlug }: TaskPageProps) {
           value={query}
           ariaLabel="解答SQL"
           className="answer-editor"
+          sqlAutocomplete={autocompleteSchema}
           onChange={setQuery}
         />
         {/* <EditorPanel title="CSV" label={tableLabel} value={task.csv} ariaLabel="Task CSV" readOnly /> */}

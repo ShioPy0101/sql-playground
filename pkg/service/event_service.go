@@ -126,7 +126,10 @@ func (s *TaskService) GetEventTask(slug, number, userID string) (PublicTask, err
 	if err != nil {
 		return PublicTask{}, err
 	}
-	result := publicTask(task)
+	result, err := publicTask(task)
+	if err != nil {
+		return PublicTask{}, err
+	}
 	applyProgressToTask(&result, progress[task.Number])
 	return result, nil
 }

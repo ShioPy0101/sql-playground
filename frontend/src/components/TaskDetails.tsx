@@ -7,7 +7,9 @@ type TaskDetailsProps = {
 };
 
 export function TaskDetails({ task }: TaskDetailsProps) {
-  const tables = parseCSVTables(task.csv);
+  const tables = task.inputTables ?? (
+    task.inputType === "sql" ? [] : parseCSVTables(task.input ?? task.csv)
+  );
 
   return (
     <section className="task-details" aria-label="問題詳細">

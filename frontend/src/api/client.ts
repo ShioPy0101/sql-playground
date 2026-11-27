@@ -31,6 +31,7 @@ export type Constraint = {
 };
 
 export type Task = {
+  inputTables?: Array<{ name: string; rows: string[][] }>;
   number: number;
   mode?: "sql" | "ddl";
   benchmark?: BenchmarkConfig;

@@ -70,6 +70,8 @@ type PublicTask struct {
 	SavedQuery  string           `json:"savedQuery,omitempty"`
 	Answered    bool             `json:"answered"`
 	Solved      bool             `json:"solved"`
+
+	InputTables []helper.InputTable `json:"inputTables,omitempty"`
 }
 
 type PublicTaskSummary struct {
@@ -168,7 +170,10 @@ func (s *TaskService) GetPublicTaskForUser(number string, userID string) (Public
 		return PublicTask{}, err
 	}
 
-	public := publicTask(task)
+	public, err := publicTask(task)
+	if err != nil {
+		return PublicTask{}, err
+	}
 	if userID == "" {
 		return public, nil
 	}
@@ -453,8 +458,8 @@ func submissionsDBPath() string {
 	return filepath.Join("data", "submissions.sqlite")
 }
 
-func publicTask(task Task) PublicTask {
-	return PublicTask{
+func publicTask(task Task) (PublicTask, error) {
+	public := PublicTask{
 		Number:      task.Number,
 		Mode:        task.Mode,
 		Benchmark:   task.Benchmark,
@@ -472,6 +477,15 @@ func publicTask(task Task) PublicTask {
 		ExpectedCSV: task.ExpectedCSV,
 		TestCount:   len(task.Tests),
 	}
+	input, inputType := taskCaseInput(task, TaskTestCase{})
+	if strings.EqualFold(strings.TrimSpace(inputType), helper.InputFormatSQL) {
+		tables, err := helper.PreviewInputTables(input, inputType)
+		if err != nil {
+			return PublicTask{}, fmt.Errorf("preview task input: %w", err)
+		}
+		public.InputTables = tables
+	}
+	return public, nil
 }
 
 func publicTaskSummary(task Task) PublicTaskSummary {

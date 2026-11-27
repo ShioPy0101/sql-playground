@@ -4,11 +4,42 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ShioPy0101/sql-playground/pkg/service/helper"
 )
+
+func TestPublicJoinTaskIncludesInitialTables(t *testing.T) {
+	service := newTestTaskService(t)
+	task, err := service.GetPublicTask("50")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []helper.InputTable{
+		{Name: "users", Rows: [][]string{{"id", "name"}, {"1", "吉田東洋"}, {"2", "坂本龍馬"}, {"6", "西郷隆盛"}}},
+		{Name: "posts", Rows: [][]string{{"id", "user_id", "body"}, {"1", "2", "藩政について"}, {"2", "1", "改革について"}, {"3", "6", "新しい国づくり"}}},
+	}
+	if !reflect.DeepEqual(task.InputTables, want) {
+		t.Fatalf("input tables = %#v, want %#v", task.InputTables, want)
+	}
+	event, err := service.CreateEvent(CreateEventInput{Slug: "join-preview", Title: "JOIN", StartsAt: time.Now().Add(-time.Hour), TaskNumbers: []int{50}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.JoinEvent(event.Slug, "preview-user", "User"); err != nil {
+		t.Fatal(err)
+	}
+	eventTask, err := service.GetEventTask(event.Slug, "50", "preview-user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(eventTask.InputTables, want) {
+		t.Fatalf("event input tables = %#v, want %#v", eventTask.InputTables, want)
+	}
+}
 
 func TestTaskServiceSubmitComparesAllCases(t *testing.T) {
 	taskDir := t.TempDir()
